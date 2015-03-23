@@ -1,5 +1,5 @@
 #! /usr/bin/python3
-"""An outline of PSIL's type system.
+"""An outline of PSIL's type system and other internal data objects.
 
 Author: Timothy Hewitt
 Date: 2015-03-19"""
@@ -27,3 +27,34 @@ class Integer(Numeric):
     
 class Float(Numeric):
     """Type for integer data in PSIL."""
+    
+class Stack:
+    """Data stack that exists during execution of a PSIL program."""
+    def __init__(self, init=None):
+        if init and len(init[1].list > init[0]: 
+            # initialize a shallow copy of a stack with a smaller size
+            self.list = init[1].list
+            self.size = init[0]
+        else:
+            # new stack, original copy
+            self.list = []
+            self.size = 0
+    
+    def push(self, data):
+        if not isinstance(data, Namespace):
+            raise TypeError(str(data) + " is not a Namespace!")
+        else:
+            self.list.append(data)
+            self.size += 1
+    
+    def pop(self):
+        if self.size <= 0:
+            raise IndexError("Tried to pop from empty stack")
+        else:
+            size -= 1
+            return self.list.pop()
+            
+    def size(self):
+        return self.size
+
+        
