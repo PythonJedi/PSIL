@@ -6,7 +6,17 @@ Date: 2015-03-19"""
 
 class Namespace:
     """Represents the type of a namespace, the catchall type."""
-
+    def __init__(self, parent=None):
+        self.dict = {}
+        self.parent=parent # "reversed" linked list of execution namespaces
+    
+    def bind(ns, name):
+        if not isinstance(ns, (Namespace, Stack)):
+            # Have to allow stacks for execution namespaces
+            raise TypeError(str(ns) +" is not a namespace or stack.")
+        else:
+            self.dict[name]=ns
+            
 class Literal(Namespace):
     """Superclass for all the literal types in PSIL."""
     

@@ -5,12 +5,17 @@ Starts up the interpreter. Also handles file IO for programs."""
 
 import sys
 
+import data
+
 def main(file):
     """Run the interpreter using input from file.
     
     if file is stdin, interactive mode is used, handled by readline()."""
     
     # Global internal objects initialized here
+    env = data.Namespace() # root namespace, will be moved down eventually
+    stack = data.Stack() # root stack, with size==len(stack.list)    
+    env.bind(stack, "__stack__")
     
     # Interpreter loop
         # input chunk, append to previous amount
