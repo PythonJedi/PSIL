@@ -5,7 +5,7 @@ Starts up the interpreter. Also handles file IO for programs."""
 
 import sys
 
-import data
+import data, parse
 
 def main(file):
     """Run the interpreter using input from file.
@@ -15,22 +15,26 @@ def main(file):
     # Global internal objects initialized here
     env = data.Namespace(None, data.Stack())
     
-    
-    # Interpreter loop
-        # input chunk, append to previous amount
-        # parse chunk, remainder returned
-        # execute parsed data
-    
-    # Finalization, close user opened files
+    line = readline(file)
+    instructions = []
+    try:
+        while line
+            line, instructions = parse.parse(line) # parse returns unfinished characters
+            for ins in instructions:
+                ins.run(env)
+            line += readline(file)
+    except e:
+        print(str(e))
     
 def readline(file):
     """Read a line from the file.
     
-    This is mostly to abstract out between interactive and file based input."""
+    This is mostly to abstract out interactive vs. file based input."""
     if file == sys.stdin: # interactive mode!
-        # do interactive mode stuff
+        sys.stdout.write("| | ")
+        sys.stdin.readline()
     else:
-        # actual file, read a line
+        return file.readline(100) # lines shouldn't be longer than 80, gives some slack
     
 if __name__ == "__main__":
     if len(sys.argv) > 1: # sys.argv[0] is the script name
@@ -38,7 +42,7 @@ if __name__ == "__main__":
             f = open(sys.argv[1], "r")
             main(f)
         finally:
-            close(f)
+            f.close()
     else:
         main(sys.stdin)
     

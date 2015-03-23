@@ -19,6 +19,10 @@ import data
 ## Instruction classes is to implement the builtin functions more than anything 
 ## else.
 
+def parse(str):
+    """Parse a string of source code."""
+    
+
 class Instruction:
     """A single instruction for the PSIL virtual machine."""
     
