@@ -19,7 +19,7 @@ class Push(Instruction):
     def __init__(self, value):
         self.value=value
 
-class Exec(Instruction):
+class Execute(Instruction):
     """Execute a code literal off the top of the stack."""
     
 class Bind(Instruction):
@@ -68,7 +68,7 @@ class Reference(Token):
     abstractions."""
     def __init__(self, string):
         self.names = string.split(":")
-        # will need better processing, but this will work for now
+        # need better processing, but this will work for now
     def __getitem__(self, index):
         if not isinstance(index, int):
             raise TypeError("References can only be indexed by integers!")
@@ -80,3 +80,11 @@ class Reference(Token):
         returns self after popping the first item in self.names"""
         self.names.pop(0)
         return self
+        
+class BeginExpression(Token):
+    """Not sure if I need this, here just in case."""
+    
+class EndExpression(Token):
+    """Triggers the creation of an Execute Instruction."""
+    def __init__(self, size):
+        self.size = size
