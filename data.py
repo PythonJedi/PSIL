@@ -10,12 +10,24 @@ class Namespace:
         self.dict = {}
         self.parent=parent # "reversed" linked list of execution namespaces
     
-    def bind(ns, name):
+    def bind(self, ns, name):
         if not isinstance(ns, (Namespace, Stack)):
             # Have to allow stacks for execution namespaces
             raise TypeError(str(ns) +" is not a namespace or stack.")
         else:
             self.dict[name]=ns
+            ns.parent = None # references do not point back, solves aliasing
+            
+    def deref(self, name):
+        if name in self.dict:
+            return self.dict[name]
+        else:
+            raise AttributeError(name+" is not an attribute of "+str(self))
+            
+    def unbind(self, name):
+        if name in self.dict:
+            del self.dict[name]
+        # fail quiet on deletion that doesn't exist
             
 class Literal(Namespace):
     """Superclass for all the literal types in PSIL."""
