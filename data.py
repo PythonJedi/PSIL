@@ -6,9 +6,10 @@ Date: 2015-03-19"""
 
 class Namespace:
     """Represents the type of a namespace, the catchall type."""
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, stack=None):
         self.dict = {}
         self.parent=parent # "reversed" linked list of execution namespaces
+        self.stack = stack
     
     def bind(self, ns, name):
         if not isinstance(ns, (Namespace, Stack)):

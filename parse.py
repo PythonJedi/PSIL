@@ -9,7 +9,15 @@ import data
 ## The purpose of a lexer and parser is to turn the source code into a series of
 ## commands for either a compiler or interpreter virtual machine.
 
-## I'm going to use a highly object oriented approach to this problem.
+## I'm going to use a highly object oriented approach to this problem. This
+## approach uses two levels of abstraction between the incoming source strings
+## and the virtual machine. The first layer are the Token and Literal objects.
+## These turn source strings into abstract concepts of the syntax. As this is a
+## stack-based postfix language, the syntax is nearly one-to-one with the 
+## lexical abstraction. The second layer are the Instruction classes, which get 
+## sent back to the virtual machine's execution queue. The purpose of the 
+## Instruction classes is to implement the builtin functions more than anything 
+## else.
 
 class Instruction:
     """A single instruction for the PSIL virtual machine."""
@@ -18,12 +26,32 @@ class Push(Instruction):
     """Push a literal on the stack."""
     def __init__(self, value):
         self.value=value
+        
+    def run(self, env):
+        env.stack.push(self.value)
 
 class Execute(Instruction):
     """Execute a code literal off the top of the stack."""
+    def __init__(self, size):
+        self.size = size
+    
+    def run(self, env):
+        code = env.stack.pop()
+        if not isinstance(code, data.Code):
+            raise TypeError("Tried to execute non-Code object "+str(code))
+        else:
+            n = code.name.copy()
+            for name in n.names:
+                env = data.Namespace(env) # build the search stack
+            code.run(env)
     
 class Bind(Instruction):
     """Pull a value and a name off the stack and bind them in the namespace."""
+    def __init__(self, name):
+        self.name = name
+        
+    def run(self, env):
+        env.bind(env.stack.pop(), self.name)
     
 class Math(Instruction):
     """Superclass for the math functions."""
@@ -38,10 +66,13 @@ class Dereference(Instruction):
         self.name = name
     
     def run(self, env):
+        stack = env.stack
         while env and not self.name[0] in env.dict:
             env = env.parent
         if env:
-            return self.follow(self.name.copy(), env)
+           d = self.follow(self.name.copy(), env)
+           d.name = self.name
+           stack.push(d)
         else:
             raise AttributeError(str(self.name)+" not found in namespace tree.")
     
@@ -80,6 +111,12 @@ class Reference(Token):
         returns self after popping the first item in self.names"""
         self.names.pop(0)
         return self
+        
+    def copy(self):
+        return Reference(str(self)) # stupid, yes, but it works
+    
+    def __str__(self):
+        return ":".join(self.names)
         
 class BeginExpression(Token):
     """Not sure if I need this, here just in case."""

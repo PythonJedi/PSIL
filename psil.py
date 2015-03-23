@@ -13,8 +13,8 @@ def main(file):
     if file is stdin, interactive mode is used, handled by readline()."""
     
     # Global internal objects initialized here
-    env = data.Namespace()
-    env.bind(data.Stack(), "__stack__")
+    env = data.Namespace(None, data.Stack())
+    
     
     # Interpreter loop
         # input chunk, append to previous amount
