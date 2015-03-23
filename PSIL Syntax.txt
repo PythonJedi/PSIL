@@ -1,0 +1,326 @@
+PSIL (PSIL Stinkin' Isn't Lisp!)
+Syntax Definition, Version 1
+Author: Timothy Hewitt
+Date: 9/16/2014
+
+Introduction:
+    This is the full syntax definition for PSIL.
+    THIS IS NOT A TUTORIAL!
+    As a reference for PSIL programmers, very useful. If you're trying to learn
+    how to code in PSIL, try the tutorial file.
+
+Literals:
+    Literals are any pieces of data embedded in the code. This includes code 
+    literals, covered later on.
+
+    Numbers:
+        All numbers are simply entered in as numerical characters: 0, 1, 5.6
+        The difference between integers and floating point numbers are generally
+        ignored except when absolutely necessary. 'ceil', 'floor', and 'round'
+        are included for the odd occasion when an integer is required. (3 5 div)
+        will produce 0.6 as opposed to 0
+
+    Strings:
+        Strings are marked by using ". Using \ to escape characters is how to 
+        embed " inside strings. \ right before a newline will escape all 
+        whitespace characters until a non-whitespace character is reached. This 
+        allows for strings to span multiple lines in indented source code. Other 
+        common escape characters such as \n, \t, and \& (for general character 
+        codes) will likely be added once the base interpreter is functioning.
+
+    Boolean:
+        Boolean literals are initially defined as "True" and "False". Empty
+        strings and zero numbers will evaluate to a boolean False, otherwise
+        they will evaluate to boolean True. More on boolean expressions in
+        further sections. These are not part of the syntax as they are simply 
+        identifiers attached to another literal that evaluates to the intended 
+        boolean value.
+
+Expressions:
+    Expressions start with '(', grouping together the data that will be operated
+    on. There are then, possibly, a number of literals, identifiers, or other 
+    expressions. The expression ends with ')', signifying that the interpreter 
+    should pop a code literal from the stack and execute it. If the item popped 
+    from the stack is not a code literal, the interpreter will complain that it 
+    tried to execute a non-executable literal. The interpreter will also 
+    complain if a piece of code pops more data than was assigned to it. This is 
+    better than running until the stack empties prematurely or the wrong type of
+    literal is used in a piece of code.
+
+Code Literals, AKA Functions/Code Blocks/Classes/Structs:
+    As the title states, these groupings of expressions have multiple
+    uses/purposes. Whenever code is encapsulated in curly braces, it is not
+    immediately executed, it instead is placed on the stack as "ready to
+    execute" code. The formal name for this is a "code literal", however that is
+    too ambiguous for most situations, so a programmer will refer to one code
+    literal as a function, another as a structure or class, and a third as a
+    code block. The naming convention is as follows:
+        - Functions are code literals that are intended to be called by other
+        code. They may or may not take input or return a value. Functions are
+        normally encapsulated in a 'def' statement that begins with the name of
+        the function being pushed the stack before the code literal, and then
+        the def function. This moves the code literal off the stack and attaches
+        it to its name in the current namespace.
+        - Code Blocks are code literals that are part of a larger flow
+        expression, such as if or while. They do not have names and in the
+        case of if, may not always be executed. if removes the unexecuted
+        code block from the stack before executing the selected code block. See
+        the section on flow control for more information.
+        - Structs are Code Literals that are simply a series of (("name" ^) def)
+        expressions. This produces a local namespace full of named data. Struct 
+        defintions end with 'dump', which puts the local namespace on the stack
+        to be 'def'ed to a name in the calling namespace. For example:
+
+            ("Point" 
+                { # Struct Definition #
+                (("y" ^) def)
+                (("x" ^) def)
+                (dump)} # Note the reverse ordering of the names. #
+            def)
+
+            # Struct Instantiation #
+            ("player_loc" (100 50 Point) def)
+
+        - Classes are similar to Structs, they just have functions attached to
+        the final namespace. It could also be said that structs are classes that
+        don't have any functions in them. They are written using the same syntax
+        of ("name" {(code literal)(dump)} def) and instantiated the same way as
+        well. Any unwanted interim data must be 'del'ed after it is no longer 
+        needed to maintain clean namespaces.
+
+Class functions:
+    When a class is instantiated and a function is called from it, the local 
+    namespace of the function is a sub-namespace of the object's namespace. This
+    means that object data members must be given descriptive names that are not 
+    superseded by internal naming in functions. 
+    
+    Note that "class defintions" are simply code literals, and would be more 
+    accurately called constructors. This means that there are no static/class 
+    functions or variables.
+
+Inheritance:
+    Inheritance is accomplished by 'merge'ing parent instances into the child
+    instance.
+
+Flow Control:
+    The two primary flow control functions in PSIL are if and while. Notice
+    that these are considered functions, as they manipulate data on the stack,
+    the data are just code literals.
+        - if is the conditional function. The syntax is:
+            (
+                (conditional expression)
+                {code to execute if true}
+                {code to execute if false}
+            if)
+        By inserting an if function in the false code literal, they form an
+        if-elseif-else statement. Alternative formatting is acceptable for long
+        strings of if statements. This is one option:
+            (
+                (first conditional)
+                {first code} {(
+                (second conditional)
+                {second code} {(
+                (third conditional)
+                {third code}
+                {default code}
+            if) if) if)
+        This is still not a great solution, future language revisions will
+        likely include a switch function that operates on code literals.
+        - while is the looping function. The syntax is:
+            (
+                {(boolean expression)}
+                {(code to execute)}
+            while)
+        Notice that the boolean expression is a code literal, this is so that
+        'while' can evaluate the expression after each iteration. Do-while loops
+        are on the table, but not absolutely necessary for a first
+        implementation. For loops are in the same boat since they are mostly 
+        syntactic sugar. To be perfectly honest, while is also syntactic sugar,
+        since it could be replaced or implemented with recursion.
+
+Comments:
+    Comments start and end with the "#" character. Call it what you like, it
+    delimits comments. Comments are not ended by newlines, as they are just
+    considered whitespace.
+    
+Identifiers:
+    Identfiers are names of named data in the namespace tree. They must contain 
+    at least one alphabetic character, and can contain any number of other 
+    alphabetic characters, digits or allowed special characters ("_", "-", "~"). 
+    
+    When an identifier is encountered in an expression, the interpreter looks up 
+    the datum attached to the identifier in the namespace tree and pushes it to 
+    the stack. This is true for code literals and namespaces as well as more 
+    traditional literals.
+
+Sub-Namespaces:
+    When using structs and classes, members can be accessed using the ':'
+    character. For example:
+        ("Player"
+        {
+            (("strength" ^) def)
+            (("health" ^) def)
+            (("y" ^) def)
+            (("x" ^) def)
+            
+            ("attack"
+            {
+                (("target" ^) def)
+                
+                ("target:health" (target:health strength sub) def)
+                # note that assignment and defintion are the same #
+            } 
+            def)
+            
+            (dump)
+        }
+        def)
+        
+    When a class function wants to refer to the members of its class, it just 
+    uses their name, the namespace system will move up and pull from the object.
+    
+    When the interpreter comes across a complex identifier, it will begin moving
+    down the tree from the current namespace. If it cannot find any of the 
+    sub-namespaces, it will immediately fail. If the identifier is simple, the 
+    interpreter will search the current namespace, then move up the chain to the
+    parent namespace and search again. If the root namespace is reached and the 
+    identifier is not found, the interpreter will complain.
+
+Builtins:
+    This is a list of builtin functions that are fundamental to the language.
+
+    - exec
+        'exec'utes another file of sourcecode. This code is executed in its own 
+        namespace, so libraries must end with a 'dump' so that an import looks
+        like this:
+            ("math" ("lib/math.psil" exec) def)
+        A local import, akin to python's "from library import *" looks like:
+            (("lib/math.psil" exec) merge)
+        Which executes the library code and then merges the namespace on the 
+        stack with the current namespace.
+    - eval
+        immediately runs a code literal on the stack. Useful for grouping 
+        multiple functions under one name without having to prepend each 
+        function's name with the group name and to visually group them in the 
+        source code.
+        example:
+            ("lib1"
+            ({
+                ("func1"
+                {
+                #code body#
+                }
+                def)
+                ("func2"
+                {
+                #code body#
+                }
+                def)
+                ("func3"
+                {
+                #code body#
+                }
+                def)
+                (dump)
+            }
+            eval)
+            def)
+        Without eval, lib1 would be a code literal instead of a namespace 
+        containing three other code literals.
+        
+    - def
+        'def'ines the first item on the stack in the current namespace with the
+        name given by the second item on the stack. Usage:
+            ("x" 5 def) # defines name "x" as 5 #
+            (("arg" ^) def) # used inside functions to name input variables #
+            ("square" {((%) mul)} def) # def also names code literals #
+    - del
+        'del'etes a name from the namespace. The antithesis of 'def', 'del' 
+        removes unwanted names from the namespace. BUILTIN NAMES ARE NOT 
+        PROTECTED! ("add" del) will be executed without question, completely and
+        totally removing 'add' from the global namespace. Making an error of 
+        this sort is immediately obvious because everything will stop working.
+        If the given name does not exist, 'del' does not do anything.
+    - dump
+        'dump's the current namespace onto the stack. Used at the end of
+        constructor functions to place the namespace on the stack to be attached
+        to whatever name the calling code wants.
+    - merge
+        'merge' takes a namespace off the stack and merges its functions and 
+        variables into the current namespace. Used to implement inheritance in
+        classes, but could be used elsewhere to interesting effect.
+
+    - if
+        'if' is explained above in the section on flow control.
+    - while
+        'while' is explained above in the section on flow control.
+
+    - ^
+        '^' also known as swap, switches the first two items on the stack.
+        Useful when a namespace is naming input values and in implementing fast
+        versions of various algorithms designed for stack based languages.
+
+    - catch
+        'catch'es exceptions in the "to be executed" code literal and executes
+        other code to handle the exception. Usage:
+            (
+                {(code to be executed)}
+                {(error handling code)}
+                {(code to always be executed)}
+            catch)
+    - raise
+        Used to raise exceptions in code.
+
+    - in
+        'in'puts a line of text from stdin and pushes it to the stack as a 
+        string.
+    - out
+        'out'puts the top item on the stack to stdout. strings are simply 
+        printed one-for one, numbers are printed in human readable form, code 
+        literals are printed using their internal representation which deletes 
+        excess whitespace, namespaces are printed as a series of "<identifier >: 
+        <value>" pairs (sub-namespaces are printed as "<identifier> : namespace" 
+        to avoid really long outputs).
+
+    - %
+        '%' also known as duplicate, copies the top item on the stack and pushes
+        the copy. This is mostly to allow for "pure" stack based algorithms.
+        These algorithms, while fast and memory efficient, tend to be very
+        obscure and hard to follow.
+
+    - add
+        returns the sum of the top two items on the stack
+    - sub
+        returns the second item subtracted by the first item
+    - mul
+        returns the product of the top two items on the stack
+    - div
+        returns the second item divided by the first item
+    - pow
+        returns the second item to the power of the first item
+
+    - eq
+        returns true if the top two items are equal
+    - ls
+        returns true if the second item is less than the first item
+    - gt
+        returns true if the second item is greater than the first 
+        item
+    - contains
+        returns true if the string in the second slot contains the string in the
+        first slot
+    - is
+        returns true if the second item fits the "is-a" test compared to the 
+        first item
+
+    - not
+        returns the boolean opposite of the top item
+    - and
+        returns true if both of the top two items are true
+    - or
+        returns true if any of the top two items are true
+    - xor
+        returns true if either of the top two items are true but not both
+
+    - concat
+        returns the first item appended to the second item

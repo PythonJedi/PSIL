@@ -1,0 +1,49 @@
+﻿PSIL (PSIL Stinkin' Isn't Lisp!)
+Backend interpreter organization, Version 1
+Author: Timothy Hewitt
+Date: 9/17/2014
+
+Introduction:
+    This file overviews the backend implmentation of the interpreter for PSIL. 
+    It is not necessary to have read this to write PSIL programs.
+    
+Data management:
+    Data is handled via the use of an explicit, anonymous, stack and a namespace
+    tree.
+    
+    The stack is going to be initially implemented as a wrapper class around a
+    traditional python list. Later revisions may decide to use other 
+    implementations of a generic stack.
+    
+    The namespace tree is implemented using wappers on python dictionaries to 
+    avoid crashing the interpreter when an invalid reference is used.
+    
+Lexical analysis:
+    The Lexical analyzer interprets code by reading in a single token 
+    (whitespace delimited set of characters, with parentheses included in the 
+    definition of whitespace for PSIL source code).
+    Interpretation then follows in the following order:
+    - Token begins with #
+        -skip to next #, encapsulated characters are comments
+    - Token begins with {
+        -read to corresponding }, keeping track of contained {} pairs.
+        -place code literal on the stack
+    - Token begins with "
+        -read to next ", reacting to \" constructs and reducing escaped extended 
+        whitespace (parentheses are not counted as whitespace in this situation 
+        because it is inside strings)
+        -push string to stack
+    - Token can be represented as a number
+        -push number to stack
+    - Token corresponds to data literal in namespace tree
+        -push value to stack
+    - Token corresponds to code literal in namespace tree
+        -execute code literal in new anonymous namespace
+    - Invalid Token error
+    
+Builtin Functions:
+    See syntax file for a list of builtin functions. These are implemented by
+    creating CodeLiteral objects with custom exec() functions that perform the
+    stated operation in the implementation. These objects are then added to the 
+    root namespace before execution starts.
+    
