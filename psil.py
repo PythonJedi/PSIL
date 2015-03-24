@@ -32,9 +32,9 @@ def readline(file):
     This is mostly to abstract out interactive vs. file based input."""
     if file == sys.stdin: # interactive mode!
         sys.stdout.write("| | ")
-        sys.stdin.readline()
+        return sys.stdin.readline().rstrip("\\\n")
     else:
-        return file.readline(100) # lines shouldn't be longer than 80, gives some slack
+        return file.readline(100).rstrip("\\\n"
     
 if __name__ == "__main__":
     if len(sys.argv) > 1: # sys.argv[0] is the script name
