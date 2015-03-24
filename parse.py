@@ -21,34 +21,54 @@ import data
 ## Instruction classes is to implement the builtin functions more than anything 
 ## else.
 
+TOKENTEST = """
+(foo bar (baz:bar 4 add) "quux" spam)
+(eggs (ham (toast (bacon fork))) eat)
+# Can you tell I'm hungry? #
+(((cheese grill) pizza) boil)
+""" # Not a comprehensive test, but should find most issues
+
+
 def load(file):
     string = ""
     for line in file:
-        string += line.rstrip("\n") # backslashes need to be handled carefully
+        string += line
     return string
 
+def tokenize(string):
+    """tokenize the string, returning a list of Token objects."""
+    prog = re.compile(Token.regex, re.VERBOSE|re.DOTALL)
+    
 class Token:
     """Superclass for lexical elements of the language.
     
     Any discrete element of the language will have an abstraction that 
     subclasses this one."""
+    regex = '|'.join((Reference.regex, Separator.regex, Literal.regex, Expression.regex))
     def __init__(self, string):
         self.string = string
         
     def evaluate(self):
         """Turns Token into an Instruction."""
         pass
+        
+class Separator(Token):
+    """Just for convenience, since it's just any number of spaces."""
+    regex = r'''(?P<Separator>
+                [ ]+ # Just a sequence of spaces
+                )'''
 
 class Reference(Token):
     """A reference to some namespace in the namespace tree.
     
     May or may not be valid, Token objects just translate from strings to 
     abstractions."""
-    regex = re.compile(r"""[a-zA-Z0-9_] +   # first reference
-                           (?:              # group start
-                           :[a-zA-Z0-9_] +  # following reference
-                           ) *              # match any and all following
-                           """, re.X)
+    regex = r"""(?P<Reference>
+                [a-zA-Z0-9_] +   # first reference
+                (?:              # group start
+                :[a-zA-Z0-9_] +  # following reference
+                ) *              # match any and all following
+                )"""
     def __init__(self, string):
         self.names = string.split(":")
         
@@ -69,38 +89,60 @@ class Reference(Token):
     
     def __str__(self):
         return ":".join(self.names)
-        
-class BeginExpression(Token):
-    """Not sure if I need this, here just in case."""
-    regex = re.compile(r'\({1}') # seriously, it's just an open parenthesis
     
-class EndExpression(Token):
+class Expression(Token):
     """Triggers the creation of an Execute Instruction."""
-    regex = re.compile(r'\){1}') # just an end parentheses
+    regex = r'''(?P<Expression>
+                \(
+                (?: # "arguments" to the code literal
+                (?P=Expression) |
+                (?P=Reference) |''' +Literal.regex+'''
+                (?P=Separator) # need to specify separator
+                )*
+                ((?P=Reference)|(?P=Code)) # code literals can be executed
+                \)
+                )'''
+    def __init__(self, string):
+        self.string = string
+    
+    def evaluate(self):
+        return Execute(
 
 class Literal(Token):
     """Superclass for Numeric, Text, and Code Literals."""
+    regex = '|'.join((String.regex, Code.regex, Numeric.regex))
     
 class String(Literal):
     """Token for a string literal."""
-    regex = re.compile(r'"\.*"') # need to remove backslash-newline-whitespace sequences 
+    regex = r'''(?P<String>
+                "\.*" # need to remove backslash-newline-whitespace sequences 
+                      # in translation
+                )''' 
     
 class Code(Literal):
     """Token for code literals."""
-    regex = re.compile(r'\{\.\}') # really, lexing of the internals happens later
+    regex = r'''(?P<Code>
+                \{\.\}  # really, lexing of the internals happens later
+                )'''
     
 class Numeric(Literal):
     """Superclass for Numeric literals."""
+    # Regex that combines all the subclass regexes
+    regex = '|'.join((Integer.regex, Float.regex))
     
 class Integer(Numeric):
     """Token for Integer literals."""
-    regex = re.compile(r'[1-9][0-9]*') # other bases may be supported in the future
+    regex = r'''(?P<Integer>
+                [1-9][0-9]* # other bases may be supported in the future
+                )''' 
     
 class Float(Numeric):
     """Token for floating point literals."""
-    regex = re.compile(r'''[0-9]* # beginning integer component
-                           \.     # decimal point
-                           [0-9]* # fractional component ''', re.X)
+    regex = r'''(?P<Float>
+                [0-9]* # beginning integer component
+                \.     # decimal point
+                [0-9]* # fractional component 
+                )'''
         
 ## Begin instruction classes
 
@@ -170,3 +212,5 @@ class Dereference(Instruction):
             raise AttributeError("Search for "+str(self.name)+" failed at "+\
                                   str(name[0])+" in "+str(env))
 
+if __name__ == "__main__":
+    print(tokenize(TOKENTEST))
