@@ -4,8 +4,6 @@ Part of Timothy Hewitt's UTD REx 2015 project.
 Author: Timothy Hewitt
 Date: 2105-03-20"""
 
-import re
-
 import data
 
 ## The purpose of a lexer and parser is to turn the source code into a series of
@@ -28,7 +26,6 @@ TOKENTEST = """
 (((cheese grill) pizza) boil)
 """ # Not a comprehensive test, but should find most issues
 
-
 def load(file):
     string = ""
     for line in file:
@@ -36,15 +33,31 @@ def load(file):
     return string
 
 def tokenize(string):
-    """tokenize the string, returning a list of Token objects."""
-    prog = re.compile(Token.regex, re.VERBOSE|re.DOTALL)
+    """tokenize the string, yielding Token objects.
     
+    Tried to use regular expressions to do this, but tokenizing a context free 
+    language is impossible with a regex tokenizer."""
+    iterator = iter(string) # need to be able to pass to subsidiary funtions
+    for c in iterator:
+        if c in (" ", "\t", "\n"): # Whitespace not in string
+            continue # run to the next iteration
+        elif c == "\"": # Beginning of string literal
+            yield String.munch(iterator) # eats end quote
+        elif c == "(":
+            pass # TODO: Implement!
+        elif c == "{":
+            pass # TODO: Implement!
+        elif c == "#":
+            Comment.munch(iterator)
+            continue # Don't forget to make Comment class
+        else: # Reference, numeric literal, or error
+            pass # TODO: Implement!
+            
 class Token:
     """Superclass for lexical elements of the language.
     
     Any discrete element of the language will have an abstraction that 
     subclasses this one."""
-    regex = '|'.join((Reference.regex, Separator.regex, Literal.regex, Expression.regex))
     def __init__(self, string):
         self.string = string
         
@@ -54,22 +67,14 @@ class Token:
         
 class Separator(Token):
     """Just for convenience, since it's just any number of spaces."""
-    regex = r'''(?P<Separator>
-                [ ]+ # Just a sequence of spaces
-                )'''
 
 class Reference(Token):
     """A reference to some namespace in the namespace tree.
     
     May or may not be valid, Token objects just translate from strings to 
     abstractions."""
-    regex = r"""(?P<Reference>
-                [a-zA-Z0-9_] +   # first reference
-                (?:              # group start
-                :[a-zA-Z0-9_] +  # following reference
-                ) *              # match any and all following
-                )"""
     def __init__(self, string):
+        self.string = string
         self.names = string.split(":")
         
     def __getitem__(self, index):
@@ -85,23 +90,16 @@ class Reference(Token):
         return self
         
     def copy(self):
-        return Reference(str(self)) # stupid, yes, but it works
+        return Reference(repr(self)) # stupid, yes, but it works
     
-    def __str__(self):
+    def __repr__(self):
         return ":".join(self.names)
+        
+    def __str__(self):
+        return "PSIL Reference:"+self.string
     
 class Expression(Token):
     """Triggers the creation of an Execute Instruction."""
-    regex = r'''(?P<Expression>
-                \(
-                (?: # "arguments" to the code literal
-                (?P=Expression) |
-                (?P=Reference) |''' +Literal.regex+'''
-                (?P=Separator) # need to specify separator
-                )*
-                ((?P=Reference)|(?P=Code)) # code literals can be executed
-                \)
-                )'''
     def __init__(self, string):
         self.string = string
     
@@ -110,40 +108,38 @@ class Expression(Token):
 
 class Literal(Token):
     """Superclass for Numeric, Text, and Code Literals."""
-    regex = '|'.join((String.regex, Code.regex, Numeric.regex))
     
 class String(Literal):
     """Token for a string literal."""
-    regex = r'''(?P<String>
-                "\.*" # need to remove backslash-newline-whitespace sequences 
-                      # in translation
-                )''' 
+    def __init__(self, string):
+        self.string = string
+    def __str__(self):
+        return "PSIL String: "+self.string
     
 class Code(Literal):
     """Token for code literals."""
-    regex = r'''(?P<Code>
-                \{\.\}  # really, lexing of the internals happens later
-                )'''
+    def __init__(self, string):
+        self.string = string
+    def __str__(self):
+        return "PSIL Code Literal: "+self.string
     
 class Numeric(Literal):
     """Superclass for Numeric literals."""
-    # Regex that combines all the subclass regexes
-    regex = '|'.join((Integer.regex, Float.regex))
     
 class Integer(Numeric):
     """Token for Integer literals."""
-    regex = r'''(?P<Integer>
-                [1-9][0-9]* # other bases may be supported in the future
-                )''' 
-    
+    def __init__(self, string):
+        self.string = string
+    def __str__(self):
+        return "PSIL Integer: "+self.string
+        
 class Float(Numeric):
     """Token for floating point literals."""
-    regex = r'''(?P<Float>
-                [0-9]* # beginning integer component
-                \.     # decimal point
-                [0-9]* # fractional component 
-                )'''
-        
+    def __init__(self, string):
+        self.string = string
+    def __str__(self):
+        return "PSIL Float: "+self.string
+    
 ## Begin instruction classes
 
 class Instruction:
