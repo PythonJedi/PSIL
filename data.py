@@ -4,6 +4,8 @@
 Author: Timothy Hewitt
 Date: 2015-03-19"""
 
+import parse
+
 class Namespace:
     """Represents the type of a namespace, the catchall type."""
     def __init__(self, parent=None, stack=None):
@@ -35,6 +37,16 @@ class Literal(Namespace):
     
 class Code(Literal):
     """Type for a code literal."""
+    def __init__(self, string, name=None):
+        self.string = string
+        self.instructions = None
+        self.name = name
+        
+    def __getattr__(self, name):
+        if name == "value":
+            if not self.instructions:
+                self.instructions = [i for i in parse.parse(self.string)]
+            return self.instructions[:]
     
 class String(Literal):
     """Type for a string literal.

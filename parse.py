@@ -43,14 +43,18 @@ def tokenize(string):
         if c in (" ", "\t", "\n"): # Whitespace not in string
             continue # run to the next iteration
         elif c == "(": # start new expression
-            if expr_size:
-                expr_size.append(expr_size.pop()+1) # expression counts in encapsulating expression
+            if expr_size: # empty expression size stack means root expression
+                expr_size.append(expr_size.pop()+1) # expression counts as elemnt in encapsulating expression
             expr_size.append(0) # make a new entry in the expression tracker
             
         elif c == ")": # finish expression
             yield Expression(expr_size.pop())
         elif c == "{":
-            pass # TODO: Implement!
+            if expr_size:
+                expr_size.append(expre_size.pop()+1)
+            else:
+                raise SyntaxError("Code literal outside expression!")
+            yield Code.munch(iterator) # eats end curly brace
         elif c == "#":
             Comment.munch(iterator)
             continue # Don't forget to make Comment class
@@ -74,8 +78,13 @@ class Token:
         """Turns Token into an Instruction."""
         pass
         
-class Separator(Token):
-    """Just for convenience, since it's just any number of spaces."""
+class Comment(Token):
+    """Never need to instance, just nice to have."""
+    def munch(iter):
+        for c in iter:
+            if c == "#":
+                return # comments mean nothing, just need to push the iterator over them
+        raise SyntaxError("Unclosed comment in parsed string!")
 
 class Reference(Token):
     """A reference to some namespace in the namespace tree.
@@ -120,17 +129,51 @@ class Literal(Token):
     
 class String(Literal):
     """Token for a string literal."""
+    def munch(iter):
+        chars = []
+        escape = False
+        for c in iter:
+            if escape:
+                chars.append(c)
+            elif c == "\\":
+                escape = True
+            elif c == "\"":
+                return String("".join(chars))
+            else:
+                chars.append(c)
+        raise SyntaxError("Reached end of source string parsing string literal")
+        
     def __init__(self, string):
         self.string = string
+        
     def __str__(self):
         return "PSIL String: "+self.string
+        
+    def evaluate(self):
+        return Push(data.String(self.string))
+    
     
 class Code(Literal):
     """Token for code literals."""
+    def munch(iter):
+        chars = []
+        lev = 1
+        for c in iter:
+            if c == "{":
+                lev += 1
+            elif c == "}":
+                if lev == 1: # match for starting brace!
+                    return Code("".join(chars))
+                lev -= 1
+            chars.append(c) # always add the character to the literal
+            
     def __init__(self, string):
         self.string = string
     def __str__(self):
         return "PSIL Code Literal: "+self.string
+    def evaluate(self):
+        """Needs some work, as code literals expand to many tokens"""
+        return Push(data.Code(self.string))
     
 class Numeric(Literal):
     """Superclass for Numeric literals."""
@@ -172,9 +215,7 @@ class Execute(Instruction):
         if not isinstance(code, data.Code):
             raise TypeError("Tried to execute non-Code object "+str(code))
         else:
-            n = code.name.copy()
-            for name in n.names:
-                env = data.Namespace(env) # build the search stack
+            
             code.run(env)
     
 class Bind(Instruction):

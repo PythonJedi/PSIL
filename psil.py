@@ -15,14 +15,17 @@ def main(file):
     # Global internal objects initialized here
     env = data.Namespace(None, data.Stack())
     
-    line = readline(file)
-    instructions = []
+    instructions = [parse.parse_file(file)] # stack of generators
     try:
-        while line
-            line, instructions = parse.parse(line) # parse returns unfinished characters
-            for ins in instructions:
-                ins.run(env)
-            line += readline(file)
+        while instructions:
+            ins_queue = instructions.pop()
+            for ins in ins_queue:
+                if isinstance(ins, parse.Execute):
+                    instructions.append(ins_queue)
+                    ins.run(env, instructions)     
+                    break
+                else:
+                    ins.run(env) # everything else just modifies environment
     except e:
         print(str(e))
     
@@ -44,5 +47,5 @@ if __name__ == "__main__":
         finally:
             f.close()
     else:
-        main(sys.stdin)
+        print("Need to implement an interacitve mode!")
     
