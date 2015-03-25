@@ -20,10 +20,10 @@ import data
 ## else.
 
 TOKENTEST = """
-(foo bar (baz:bar 4 add) "quux" spam)
+(foo bar (baz:bar -4 add) "quux" spam)
 (eggs (ham (toast (bacon fork))))
 # Can you tell I'm hungry? #
-(((cheese grill) pizza) boil)
+(((cheese grill) pizza) 0.45)
 """ # Not a comprehensive test, but should find most issues
 
 def load(file):
@@ -37,34 +37,51 @@ def tokenize(string):
     
     Tried to use regular expressions to do this, but tokenizing a context free 
     language is impossible with a regex tokenizer."""
+    
+    # need to insert spaces before close parenthesis
+    string = " )".join(string.split(")"))
+    
     iterator = iter(string) # need to be able to pass to subsidiary functions
     expr_size = []  #stack to keep track of the size of the current expression
     for c in iterator:
-        if c in (" ", "\t", "\n"): # Whitespace not in string
+        if c in " \t\n": # Whitespace not inside a string literal
             continue # run to the next iteration
         elif c == "(": # start new expression
             if expr_size: # empty expression size stack means root expression
-                expr_size.append(expr_size.pop()+1) # expression counts as elemnt in encapsulating expression
+                expr_size.append(expr_size.pop()+1) # expression counts as element in encapsulating expression
             expr_size.append(0) # make a new entry in the expression tracker
             
         elif c == ")": # finish expression
-            yield Expression(expr_size.pop())
+            yield Expression(expr_size.pop()-1)
+            # need to subtract one because the code literal that is executed shouldn't count
         elif c == "{":
             if expr_size:
-                expr_size.append(expre_size.pop()+1)
+                expr_size.append(expr_size.pop()+1)
             else:
                 raise SyntaxError("Code literal outside expression!")
             yield Code.munch(iterator) # eats end curly brace
         elif c == "#":
             Comment.munch(iterator)
-            continue # Don't forget to make Comment class
-        else: # Reference, numeric literal, or error
+            continue 
+        else: # Reference, numeric literal, string, or error
             if c == "\"": # Beginning of string literal
                 if expr_size:
-                    expr_size.append(expre_size.pop()+1)
+                    expr_size.append(expr_size.pop()+1)
                 else:
                     raise SyntaxError("String literal outside expression!")
                 yield String.munch(iterator) # eats end quote
+            elif c.isdigit() or c in ".-": # numeric literal
+                if expr_size:
+                    expr_size.append(expr_size.pop()+1)
+                else:
+                    raise SyntaxError("Numeric literal outside expression!")
+                yield Numeric.munch(c, iterator) # c is the first character
+            else: # Reference or syntax error
+                if expr_size:
+                    expr_size.append(expr_size.pop()+1)
+                else:
+                    raise SyntaxError("String literal outside expression!")
+                yield Reference.munch(c, iterator) # c is the first character
             
 class Token:
     """Superclass for lexical elements of the language.
@@ -91,6 +108,17 @@ class Reference(Token):
     
     May or may not be valid, Token objects just translate from strings to 
     abstractions."""
+    def munch(c, iter):
+        chars = [c]
+        for c in iter:
+            if c in " \n\t":
+                break
+            if c == ":" or c.isalpha():
+                chars.append(c)
+            else:
+                raise SyntaxError("Invalid character in reference: "+c)
+        return Reference("".join(chars))
+        
     def __init__(self, string):
         self.string = string
         self.names = string.split(":")
@@ -114,7 +142,7 @@ class Reference(Token):
         return ":".join(self.names)
         
     def __str__(self):
-        return "PSIL Reference:"+self.string
+        return "PSIL Reference: "+self.string
     
 class Expression(Token):
     """Triggers the creation of an Execute Instruction."""
@@ -122,7 +150,10 @@ class Expression(Token):
         self.size = size
     
     def evaluate(self):
-        return Execute()
+        return Execute(self.size)
+        
+    def __str__(self):
+        return "PSIL Expression, size: "+str(self.size)
 
 class Literal(Token):
     """Superclass for Numeric, Text, and Code Literals."""
@@ -177,6 +208,24 @@ class Code(Literal):
     
 class Numeric(Literal):
     """Superclass for Numeric literals."""
+    def munch(c, iter):
+        chars = [c] # c is the character eaten by the tokenizer
+        float = False
+        for c in iter:
+            if c in " \n\t":
+                break
+            if c == ".":
+                if not float:
+                    float = True
+                else:
+                    raise SyntaxError("Invalid numeric literal: Too many '.'")
+            elif not c.isdigit():
+                raise SyntaxError("Non-Digit in Numeric Literal")
+            chars.append(c)
+        if float:
+            return Float("".join(chars))
+        else:
+            return Integer("".join(chars))
     
 class Integer(Numeric):
     """Token for Integer literals."""
@@ -195,7 +244,9 @@ class Float(Numeric):
 ## Begin instruction classes
 
 class Instruction:
-    """A single instruction for the PSIL virtual machine."""
+    """A single instruction for the PSIL virtual machine.
+    
+    These are the implied actions: push, dereference, and execute. All other actions in the language are invoked like any other """
     
 class Push(Instruction):
     """Push a literal on the stack."""
@@ -210,24 +261,14 @@ class Execute(Instruction):
     def __init__(self, size):
         self.size = size
     
-    def run(self, env):
+    def run(self, env, instructions):
         code = env.stack.pop()
         if not isinstance(code, data.Code):
             raise TypeError("Tried to execute non-Code object "+str(code))
+        elif isinstance(code, data.LLCode):
+            code.run(env) # LLCode is a superclass of any code written in python
         else:
-            
-            code.run(env)
-    
-class Bind(Instruction):
-    """Pull a value and a name off the stack and bind them in the namespace."""
-    def __init__(self, name):
-        self.name = name
-        
-    def run(self, env):
-        env.bind(env.stack.pop(), self.name)
-    
-class Math(Instruction):
-    """Superclass for the math functions."""
+            instructions.append(code.instructions)
     
 class Dereference(Instruction):
     """Search the namespace tree for a certain namespace and push it.
@@ -237,6 +278,9 @@ class Dereference(Instruction):
     dictionary items."""
     def __init__(self, name):
         self.name = name
+        
+    def string(s, env):
+        """Dereference the string s given environment env."""
     
     def run(self, env):
         stack = env.stack
@@ -259,4 +303,5 @@ class Dereference(Instruction):
                                   str(name[0])+" in "+str(env))
 
 if __name__ == "__main__":
-    print(tokenize(TOKENTEST))
+    for t in tokenize(TOKENTEST):
+        print(t)

@@ -39,14 +39,19 @@ class Code(Literal):
     """Type for a code literal."""
     def __init__(self, string, name=None):
         self.string = string
-        self.instructions = None
+        self.instruction_list = None
         self.name = name
         
-    def __getattr__(self, name):
-        if name == "value":
-            if not self.instructions:
-                self.instructions = [i for i in parse.parse(self.string)]
-            return self.instructions[:]
+    def instructions(self):
+        if not self.instruction_list:
+            self.instruction_list = [i for i in parse.parse(self.string)]
+        for i in self.instruction_list:
+            yield i
+            
+class LLCode(Code):
+    """Superclass for any code not implemented in PSIL
+    
+    This code is invoked by calling code.run(env) in the Execute instruction."""
     
 class String(Literal):
     """Type for a string literal.
@@ -66,7 +71,7 @@ class Float(Numeric):
 class Stack:
     """Data stack that exists during execution of a PSIL program."""
     def __init__(self, init=None):
-        if init and len(init[1].list > init[0]: 
+        if init and len(init[1].list) > init[0]: 
             # initialize a shallow copy of a stack with a smaller size
             self.list = init[1].list
             self.size = init[0]
