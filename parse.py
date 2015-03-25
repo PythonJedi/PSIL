@@ -21,7 +21,7 @@ import data
 
 TOKENTEST = """
 (foo bar (baz:bar 4 add) "quux" spam)
-(eggs (ham (toast (bacon fork))) eat)
+(eggs (ham (toast (bacon fork))))
 # Can you tell I'm hungry? #
 (((cheese grill) pizza) boil)
 """ # Not a comprehensive test, but should find most issues
@@ -37,21 +37,30 @@ def tokenize(string):
     
     Tried to use regular expressions to do this, but tokenizing a context free 
     language is impossible with a regex tokenizer."""
-    iterator = iter(string) # need to be able to pass to subsidiary funtions
+    iterator = iter(string) # need to be able to pass to subsidiary functions
+    expr_size = []  #stack to keep track of the size of the current expression
     for c in iterator:
         if c in (" ", "\t", "\n"): # Whitespace not in string
             continue # run to the next iteration
-        elif c == "\"": # Beginning of string literal
-            yield String.munch(iterator) # eats end quote
-        elif c == "(":
-            pass # TODO: Implement!
+        elif c == "(": # start new expression
+            if expr_size:
+                expr_size.append(expr_size.pop()+1) # expression counts in encapsulating expression
+            expr_size.append(0) # make a new entry in the expression tracker
+            
+        elif c == ")": # finish expression
+            yield Expression(expr_size.pop())
         elif c == "{":
             pass # TODO: Implement!
         elif c == "#":
             Comment.munch(iterator)
             continue # Don't forget to make Comment class
         else: # Reference, numeric literal, or error
-            pass # TODO: Implement!
+            if c == "\"": # Beginning of string literal
+                if expr_size:
+                    expr_size.append(expre_size.pop()+1)
+                else:
+                    raise SyntaxError("String literal outside expression!")
+                yield String.munch(iterator) # eats end quote
             
 class Token:
     """Superclass for lexical elements of the language.
@@ -100,11 +109,11 @@ class Reference(Token):
     
 class Expression(Token):
     """Triggers the creation of an Execute Instruction."""
-    def __init__(self, string):
-        self.string = string
+    def __init__(self, size):
+        self.size = size
     
     def evaluate(self):
-        return Execute(
+        return Execute()
 
 class Literal(Token):
     """Superclass for Numeric, Text, and Code Literals."""
