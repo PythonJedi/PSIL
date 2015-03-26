@@ -36,5 +36,5 @@ Searching in a graph until a null pointer is found can cause infinite loops. Thi
 
 ### License
 
-This project is released under the zlib license. See `LICENSE.txt`
+This project is released under the zlib license. See [LICENSE.txt]()
 
