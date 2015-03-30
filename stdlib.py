@@ -8,8 +8,8 @@ class Bind(LLCode):
     def __init__(self):
         pass
         
-    def run(self, env):
-        val = env.stack.pop()
-        name_s = env.stack.pop()
+    def run(self, state):
+        val = state.env.stack.pop()
+        name_s = state.env.stack.pop()
         # traverse the namespaces so that Namespace.bind() can be used
         

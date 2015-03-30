@@ -20,20 +20,15 @@ class Namespace:
             self.dict[name]=ns
             ns.parent = None # references do not point back, solves aliasing
             
-    def deref(self, name):
-        if name in self.dict:
-            return self.dict[name]
-        else:
-            raise AttributeError(name+" is not an attribute of "+str(self))
-            
     def unbind(self, name):
         if name in self.dict:
             del self.dict[name]
         # fail quiet on deletion that doesn't exist
     
-    def search(self, name):
+    def deref(self, name):
+        nm = name.copy()
         val = self._search_up(name)
-        val.name = name.string
+        val.name = nm # need unmodified copy
     
     def _search_up(self, name):
         if name[0] in self.dict:

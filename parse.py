@@ -218,9 +218,8 @@ class Code(Literal):
         self.string = string
     def __str__(self):
         return "PSIL Code Literal: "+self.string
-    def evaluate(self):
-        """Needs some work, as code literals expand to many tokens"""
-        return Push(data.Code(self.string))
+    def instructions(self):
+        return parse(iter(self.string))
     
 class Numeric(Literal):
     """Superclass for Numeric literals."""
