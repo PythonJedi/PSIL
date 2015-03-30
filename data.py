@@ -32,6 +32,10 @@ class Namespace:
         # fail quiet on deletion that doesn't exist
     
     def search(self, name):
+        val = self._search_up(name)
+        val.name = name.string
+    
+    def _search_up(self, name):
         if name[0] in self.dict:
             return self.dict[name[0]]._search_down(name.next())
         elif self.parent: # name not found, but not root namespace

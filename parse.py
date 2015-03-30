@@ -95,7 +95,9 @@ def parse(char_stream):
     tokens = tokenize(char_stream)
     for t in tokens:
         if isinstance(t, (Literal, Reference)):
-            yield Push(
+            yield Push(t)
+        elif isinstance(t, Expression):
+            yield Execute(t.size)
                 
 class Token:
     """Superclass for lexical elements of the language.
@@ -266,27 +268,18 @@ class Push(Instruction):
     """Push a literal on the stack."""
     def __init__(self, value):
         self.value=value
-        
-    def run(self, env):
-        if isinstance(self.value, Literal):
-            env.stack.push(self)
-        elif isinstance(self.value, Reference):
-            env.stack.push(env.search(self.value))
 
 class Execute(Instruction):
     """Execute a code literal off the top of the stack."""
     def __init__(self, size):
         self.size = size
-    
-    def run(self, env, instructions):
-        code = env.stack.pop()
-        if not isinstance(code, data.Code):
-            raise TypeError("Tried to execute non-Code object "+str(code))
-        elif isinstance(code, data.LLCode):
-            code.run(env) # LLCode is a superclass of any code written in python
-        else:
-            instructions.append(code.instructions)
+        
+            
+class External(Instruction):
+    """Execute an external source file."""
+    def __init__(self, fn):
+        self.filename = fn
 
 if __name__ == "__main__":
-    for t in tokenize(iter(TOKENTEST)):
+    for i in parse(iter(TOKENTEST)):
         print(t)
