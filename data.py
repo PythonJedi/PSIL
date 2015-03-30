@@ -10,13 +10,12 @@ class Namespace:
     """Represents the type of a namespace, the catchall type."""
     def __init__(self, parent=None, stack=None):
         self.dict = {}
-        self.parent=parent # "reversed" linked list of execution namespaces
+        self.parent = parent # "reversed" linked list of execution namespaces
         self.stack = stack
     
     def bind(self, ns, name):
-        if not isinstance(ns, (Namespace, Stack)):
-            # Have to allow stacks for execution namespaces
-            raise TypeError(str(ns) +" is not a namespace or stack.")
+        if not isinstance(ns, Namespace):
+            raise TypeError(str(ns) +" is not a namespace.")
         else:
             self.dict[name]=ns
             ns.parent = None # references do not point back, solves aliasing
@@ -31,7 +30,21 @@ class Namespace:
         if name in self.dict:
             del self.dict[name]
         # fail quiet on deletion that doesn't exist
-            
+    
+    def search(self, name):
+        if name[0] in self.dict:
+            return self.dict[name[0]]._search_down(name.next())
+        elif self.parent: # name not found, but not root namespace
+            return self.parent.search(name) # Namespace.search(self.parent, name)
+        else: # root namespace, name not found
+            raise AttributeError(str(name)+" not found in namespace tree.")
+
+    def _search_down(self, name):
+        if name[0] in self.dict:
+            return self.dict[name[0]]._search_down(name.next())
+        else:
+            raise AttributeError(str(name)+" not found in namespace tree.")
+
 class Literal(Namespace):
     """Superclass for all the literal types in PSIL."""
     

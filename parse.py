@@ -20,30 +20,38 @@ import data
 ## else.
 
 TOKENTEST = """
-(foo bar (baz:bar -4 add) "quux" spam)
+(foo bar {(baz:bar -4 add)} "quux" spam)
 (eggs (ham (toast (bacon fork))))
 # Can you tell I'm hungry? #
 (((cheese grill) pizza) 0.45)
 """ # Not a comprehensive test, but should find most issues
 
-def load(file):
-    string = ""
-    for line in file:
-        string += line
-    return string
+def preprocess(char_stream):
+    """Preprocess the inbound character stream.
+    
+    This mainly removes comments and inflates expressions."""
+    for c in char_stream:
+        if c == "#":
+            Comment.munch(char_stream)
+            continue
+        elif c in ")}":
+            yield " "
+        elif c in "({":
+            yield c # makes the text stream cleaner
+            c = " "
+        elif c == "\n":
+            continue # newlines mean nothing
+        yield c # this means that the ')' are passed back 
 
-def tokenize(string):
-    """tokenize the string, yielding Token objects.
+def tokenize(char_stream):
+    """tokenize the character stream.
     
     Tried to use regular expressions to do this, but tokenizing a context free 
     language is impossible with a regex tokenizer."""
     
-    # need to insert spaces before close parenthesis
-    string = " )".join(string.split(")"))
-    
-    iterator = iter(string) # need to be able to pass to subsidiary functions
+    preproc = preprocess(char_stream)
     expr_size = []  #stack to keep track of the size of the current expression
-    for c in iterator:
+    for c in preproc:
         if c in " \t\n": # Whitespace not inside a string literal
             continue # run to the next iteration
         elif c == "(": # start new expression
@@ -59,30 +67,36 @@ def tokenize(string):
                 expr_size.append(expr_size.pop()+1)
             else:
                 raise SyntaxError("Code literal outside expression!")
-            yield Code.munch(iterator) # eats end curly brace
-        elif c == "#":
-            Comment.munch(iterator)
-            continue 
+            yield Code.munch(preproc) # eats end curly brace
         else: # Reference, numeric literal, string, or error
             if c == "\"": # Beginning of string literal
                 if expr_size:
                     expr_size.append(expr_size.pop()+1)
                 else:
                     raise SyntaxError("String literal outside expression!")
-                yield String.munch(iterator) # eats end quote
+                yield String.munch(preproc) # eats end quote
             elif c.isdigit() or c in ".-": # numeric literal
                 if expr_size:
                     expr_size.append(expr_size.pop()+1)
                 else:
                     raise SyntaxError("Numeric literal outside expression!")
-                yield Numeric.munch(c, iterator) # c is the first character
+                yield Numeric.munch(c, preproc) # c is the first character
             else: # Reference or syntax error
                 if expr_size:
                     expr_size.append(expr_size.pop()+1)
                 else:
                     raise SyntaxError("String literal outside expression!")
-                yield Reference.munch(c, iterator) # c is the first character
-            
+                yield Reference.munch(c, preproc) # c is the first character
+                
+def parse(char_stream):
+    """Parse an incoming character stream.
+    
+    generates a stream of Instruction objects."""
+    tokens = tokenize(char_stream)
+    for t in tokens:
+        if isinstance(t, (Literal, Reference)):
+            yield Push(
+                
 class Token:
     """Superclass for lexical elements of the language.
     
@@ -254,7 +268,10 @@ class Push(Instruction):
         self.value=value
         
     def run(self, env):
-        env.stack.push(self.value)
+        if isinstance(self.value, Literal):
+            env.stack.push(self)
+        elif isinstance(self.value, Reference):
+            env.stack.push(env.search(self.value))
 
 class Execute(Instruction):
     """Execute a code literal off the top of the stack."""
@@ -269,39 +286,7 @@ class Execute(Instruction):
             code.run(env) # LLCode is a superclass of any code written in python
         else:
             instructions.append(code.instructions)
-    
-class Dereference(Instruction):
-    """Search the namespace tree for a certain namespace and push it.
-    
-    Searches up from the current execution environment through the parent 
-    reference and then back down through named references in the environment's 
-    dictionary items."""
-    def __init__(self, name):
-        self.name = name
-        
-    def string(s, env):
-        """Dereference the string s given environment env."""
-    
-    def run(self, env):
-        stack = env.stack
-        while env and not self.name[0] in env.dict:
-            env = env.parent
-        if env:
-           d = self.follow(self.name.copy(), env)
-           d.name = self.name
-           stack.push(d)
-        else:
-            raise AttributeError(str(self.name)+" not found in namespace tree.")
-    
-    def follow(self, name, env):
-        if not name: # name empty, env is target
-            return env
-        elif name[0] in env.dict:
-            return self.follow(name.next(), env.dict[name[0]])
-        else:
-            raise AttributeError("Search for "+str(self.name)+" failed at "+\
-                                  str(name[0])+" in "+str(env))
 
 if __name__ == "__main__":
-    for t in tokenize(TOKENTEST):
+    for t in tokenize(iter(TOKENTEST)):
         print(t)
