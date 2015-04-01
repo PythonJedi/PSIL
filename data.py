@@ -24,22 +24,34 @@ class Namespace:
         if name in self.dict:
             del self.dict[name]
         # fail quiet on deletion that doesn't exist
+        
+    def grab(self, id):
+        if self.validate(name):
+            return self.dict[name]
     
     def deref(self, name):
         nm = name.copy()
-        val = self._search_up(name)
+        start = self.search_up(name)
+        val = self.search_down(name)
         val.name = nm # need unmodified copy
+        return val
+        
+    def validate(self, id):
+        """Return whether id is a valid identifier for this namespace."""
+        return id in self.dict
     
-    def _search_up(self, name):
-        if name[0] in self.dict:
-            return self.dict[name[0]]._search_down(name.next())
+    def search_up(self, name):
+        if self.validate(name[0])
+            return self
         elif self.parent: # name not found, but not root namespace
-            return self.parent.search(name) # Namespace.search(self.parent, name)
+            return self.parent.search_up(name) # Namespace.search(self.parent, name)
         else: # root namespace, name not found
             raise AttributeError(str(name)+" not found in namespace tree.")
 
-    def _search_down(self, name):
-        if name[0] in self.dict:
+    def search_down(self, name):
+        if not name.names:
+            return self # finished search successfully
+        elif self.validate(name[0]):
             return self.dict[name[0]]._search_down(name.next())
         else:
             raise AttributeError(str(name)+" not found in namespace tree.")

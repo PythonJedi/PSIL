@@ -1,7 +1,7 @@
 """Builtin functions for PSIL"""
 
 from data import LLCode
-from parse import Dereference
+import parse
     
 class Bind(LLCode):
     """Pull a value and a name off the stack and bind them in the namespace."""
@@ -10,6 +10,7 @@ class Bind(LLCode):
         
     def run(self, state):
         val = state.env.stack.pop()
-        name_s = state.env.stack.pop()
-        # traverse the namespaces so that Namespace.bind() can be used
+        name = state.env.stack.pop()
+        ns = state.env.deref(name.prev())
+        ns.bind(
         

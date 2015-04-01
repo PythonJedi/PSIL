@@ -151,6 +151,13 @@ class Reference(Token):
         self.names.pop(0)
         return self
         
+    def prev(self):
+        """reference to the namespace that contains the one referenced"""
+        if len(self.names) > 1:
+            return Reference(":".join(self.names[:-1]))
+        else:
+            return Reference("")
+        
     def copy(self):
         return Reference(repr(self)) # stupid, yes, but it works
     

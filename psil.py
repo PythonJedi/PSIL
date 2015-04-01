@@ -21,8 +21,10 @@ class Interpreter:
         try:
             while self.instructions and self.env:
                 self.op_stream = self.instructions.pop()
+                
                 for ins in self.op_stream:
                     self.op(ins)
+                
                 self.env = self.env.parent
                 while self.env and not self.env.stack:
                     self.env = self.env.parent
@@ -33,12 +35,13 @@ class Interpreter:
     def op(self, ins):
         """Execute a single instruction."""
         if isinstance(ins, parse.Execute):
-            instructions.append(op_stream)
+            self.instructions.append(op_stream)
             code = self.env.stack.pop()
+            
             if hasattr(code, "name"): # executing code literal from namespace
                 self.build_search_path(code.name)
-            else: # direct code literal execution
-                self.env = data.Namespace(self.env, data.Stack())
+                
+            self.append_env(data.Namespace(self.env, data.Stack()))
             
             if not isinstance(code, data.Code):
                 raise TypeError("Tried to execute non-Code object "+str(code))
@@ -63,7 +66,17 @@ class Interpreter:
         """Appends the namespaces in name to the search path. 
         
         should only be called with a verified name."""
-        
+        self.append_env(self.env.search_up(name))
+        while name.names:
+            if self.env.validate(name[0]):
+                self.append_env(self.env.grab(name[0]))
+            else:
+                raise AttributeError("Failed to find "+str(name))
+            
+                
+    def append_env(self, env):
+        env.parent = self.env
+        self.env = env
     
     
 if __name__ == "__main__":
