@@ -71,18 +71,19 @@ Introduction:
     gritty behind the scenes stuff that would normally be passed off to 
     statements in c-like languages or left unimplemented in languages like lisp.
     
+    NOTE: Builtins are designed to modify the current environment and therefore 
+    do not get their own execution environment.
+    
     1. Binding and Execution:
         1. "def" binds a string and datum from the stack in the namespace tree
             1. the string is interpreted as a name before binding
             2. also functions as assignment, i.e. rebinding
-        2. "eval" evaluates a code literal from the stack
-            1. code is executed in a namespace attached to invoking namespace
-        3. "exec" evaluates another file of code
+        2. "exec" evaluates another file of code
             1. namespaces work the same as eval
-        4. "dump" places a reference to the local namespace on the stack
-        5. "merge" combines a namespace from the stack with the local namespace
+        3. "dump" places a reference to the local namespace on the stack
+        4. "merge" combines a namespace from the stack with the local namespace
             1. best used sparingly as it overwrites current names
-        6. "del" removes a name from the local namespace.
+        5. "del" removes a name from the local namespace.
             1. limited to local scope to stave off stupidity
     
     2. Flow Control:

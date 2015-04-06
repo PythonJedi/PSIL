@@ -20,7 +20,7 @@ import data
 ## else.
 
 TOKENTEST = """
-(foo bar {(baz:bar -4 add)} "quux" spam)
+("foo" bar {(baz:bar -4 add)} "quux" spam)
 (eggs (ham (toast (bacon fork))))
 # Can you tell I'm hungry? #
 (((cheese grill) pizza) 0.45)
@@ -52,6 +52,7 @@ def tokenize(char_stream):
     preproc = preprocess(char_stream)
     expr_size = []  #stack to keep track of the size of the current expression
     for c in preproc:
+        #print(c)
         if c in " \t\n": # Whitespace not inside a string literal
             continue # run to the next iteration
         elif c == "(": # start new expression
@@ -94,10 +95,19 @@ def parse(char_stream):
     generates a stream of Instruction objects."""
     tokens = tokenize(char_stream)
     for t in tokens:
-        if isinstance(t, (Literal, Reference)):
+        # print(t)
+        if isinstance(t, Reference):
             yield Push(t)
+        elif isinstance(t, Literal):
+            yield Push(data.instance(t))
         elif isinstance(t, Expression):
             yield Execute(t.size)
+            
+def chars(file):
+    """turns a file like object into a character stream"""
+    for line in file:
+        for c in line:
+            yield c
                 
 class Token:
     """Superclass for lexical elements of the language.
@@ -165,7 +175,7 @@ class Reference(Token):
         return ":".join(self.names)
         
     def __str__(self):
-        return "PSIL Reference: "+self.string
+        return "PSIL Reference Token: "+self.string
     
 class Expression(Token):
     """Triggers the creation of an Execute Instruction."""
@@ -173,7 +183,7 @@ class Expression(Token):
         self.size = size
     
     def evaluate(self):
-        return Execute(self.size)
+        return Execute()
         
     def __str__(self):
         return "PSIL Expression, size: "+str(self.size)
@@ -201,7 +211,7 @@ class String(Literal):
         self.string = string
         
     def __str__(self):
-        return "PSIL String: "+self.string
+        return "PSIL String Token: "+self.string
         
     def evaluate(self):
         return Push(data.String(self.string))
@@ -224,9 +234,7 @@ class Code(Literal):
     def __init__(self, string):
         self.string = string
     def __str__(self):
-        return "PSIL Code Literal: "+self.string
-    def instructions(self):
-        return parse(iter(self.string))
+        return "PSIL Code Literal Token: "+self.string
     
 class Numeric(Literal):
     """Superclass for Numeric literals."""
@@ -254,14 +262,14 @@ class Integer(Numeric):
     def __init__(self, string):
         self.string = string
     def __str__(self):
-        return "PSIL Integer: "+self.string
+        return "PSIL Integer Token: "+self.string
         
 class Float(Numeric):
     """Token for floating point literals."""
     def __init__(self, string):
         self.string = string
     def __str__(self):
-        return "PSIL Float: "+self.string
+        return "PSIL Float Token: "+self.string
     
 ## Begin instruction classes
 
@@ -274,18 +282,18 @@ class Push(Instruction):
     """Push a literal on the stack."""
     def __init__(self, value):
         self.value=value
+        
+    def __str__(self):
+        return "PUSH "+str(self.value)
 
 class Execute(Instruction):
     """Execute a code literal off the top of the stack."""
-    def __init__(self, size):
-        self.size = size
+    def __init__(self, tokens):
+        self.num_tokens = tokens
         
-            
-class External(Instruction):
-    """Execute an external source file."""
-    def __init__(self, fn):
-        self.filename = fn
+    def __str__(self):
+        return "EXECUTE (tokens: "+str(self.num_tokens)+")"
 
 if __name__ == "__main__":
     for i in parse(iter(TOKENTEST)):
-        print(t)
+        print(i)

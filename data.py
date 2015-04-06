@@ -13,26 +13,29 @@ class Namespace:
         self.parent = parent # "reversed" linked list of execution namespaces
         self.stack = stack
     
-    def bind(self, ns, name):
+    def bind(self, ns, id):
         if not isinstance(ns, Namespace):
             raise TypeError(str(ns) +" is not a namespace.")
         else:
-            self.dict[name]=ns
+            self.dict[id]=ns
             ns.parent = None # references do not point back, solves aliasing
+            #print("Bound "+str(ns)+" to "+id+" in "+str(self))
             
-    def unbind(self, name):
-        if name in self.dict:
-            del self.dict[name]
+    def unbind(self, id):
+        if self.validate(id):
+            del self.dict[id]
         # fail quiet on deletion that doesn't exist
         
     def grab(self, id):
-        if self.validate(name):
-            return self.dict[name]
+        if self.validate(id):
+            return self.dict[id]
     
     def deref(self, name):
+        if not name.string: # empty ref
+            return self
         nm = name.copy()
         start = self.search_up(name)
-        val = self.search_down(name)
+        val = start.search_down(name)
         val.name = nm # need unmodified copy
         return val
         
@@ -41,10 +44,10 @@ class Namespace:
         return id in self.dict
     
     def search_up(self, name):
-        if self.validate(name[0])
+        if self.validate(name[0]):
             return self
         elif self.parent: # name not found, but not root namespace
-            return self.parent.search_up(name) # Namespace.search(self.parent, name)
+            return self.parent.search_up(name) # Namespace.search_up(self.parent, name)
         else: # root namespace, name not found
             raise AttributeError(str(name)+" not found in namespace tree.")
 
@@ -52,25 +55,38 @@ class Namespace:
         if not name.names:
             return self # finished search successfully
         elif self.validate(name[0]):
-            return self.dict[name[0]]._search_down(name.next())
+            return self.dict[name[0]].search_down(name.next())
         else:
             raise AttributeError(str(name)+" not found in namespace tree.")
+            
+    def __str__(self):
+        return "this: "+repr(self)+"\n"+\
+               "stack: "+str(self.stack)+"\n"+\
+               "Children: "+str(self.dict)+"\n"+\
+               "parent: \n\\\n"+str(self.parent)+"\n/\n"
+               
 
 class Literal(Namespace):
     """Superclass for all the literal types in PSIL."""
+    def __init__(self):
+        super().__init__()
     
 class Code(Literal):
     """Type for a code literal."""
-    def __init__(self, string, name=None):
-        self.string = string
-        self.instruction_list = None
-        self.name = name
+    def __init__(self, token=None):
+        if token:
+            self.string = token.string
+        else:
+            self.string = "<Builtin>"
+        super().__init__()
         
     def instructions(self):
-        if not self.instruction_list:
-            self.instruction_list = [i for i in parse.parse(self.string)]
-        for i in self.instruction_list:
-            yield i
+        if not hasattr(self, "op_list"):
+            self.op_list = [op for op in parse.parse(iter(self.string))]
+        return iter(self.op_list)
+        
+    def __str__(self):
+        return "PSIL Code Literal: "+str(self.string)
             
 class LLCode(Code):
     """Superclass for any code not implemented in PSIL
@@ -82,20 +98,71 @@ class String(Literal):
     
     I may work on unicode support, but it's not required for a proof of 
     concept."""
-    
+    def __init__(self, token):
+        """Creates the actual data object from the token representing it."""
+        self.string = token.string
+        super().__init__()
+        
+    def __str__(self):
+        return "PSIL String: "+self.string
+        
 class Numeric(Literal):
     """Type superclass for numbers in PSIL."""
     
 class Integer(Numeric):
     """Type for integer data in PSIL."""
+    def __init__(self, token):
+        self.val = int(token.string)
+        super().__init__()
+        
+    def __str__(self):
+        return "PSIL Integer: "+str(self.val)
+        
+    def __mul__(self, other):
+        if not isinstance(other, Numeric):
+            raise TypeError("Cannot multiply non-Numeric "+str(other))
+        if isinstance(other, Integer):
+            return Integer(str(self.val*other.val))
+        elif isinstance(other, Float):
+            return Float(str(self.val*other.val))
+        else:
+            raise TypeError("Unrecognized Numeric "+str(other))
+            
+    def __sub__(self, other):
+        if not isinstance(other, Numeric):
+            raise TypeError("Cannot subtract non-Numeric "+str(other))
+        if isinstance(other, Integer):
+            return Integer(str(self.val-other.val))
+        elif isinstance(other, Float):
+            return Float(str(self.val-other.val))
+        else:
+            raise TypeError("Unrecognized Numeric "+str(other))
     
 class Float(Numeric):
     """Type for integer data in PSIL."""
+    def __init__(self, token):
+        self.val = float(token.string)
+        super().__init__()
+        
+    def __str__(self):
+        return "PSIL Float: "+str(self.val)
+        
+mapping = {
+    parse.Code: Code,
+    parse.String: String,
+    parse.Integer: Integer,
+    parse.Float: Float
+    }
+def instance(token):
+    """Create an instance of any namespace from a token"""
+    
+    if type(token) in mapping:
+        return mapping[type(token)](token) # index by token, __init__(token)
     
 class Stack:
     """Data stack that exists during execution of a PSIL program."""
     def __init__(self, init=None):
-        if init and len(init[1].list) > init[0]: 
+        if init and len(init[1].list) >= init[0]: 
             # initialize a shallow copy of a stack with a smaller size
             self.list = init[1].list
             self.size = init[0]
@@ -106,7 +173,7 @@ class Stack:
     
     def push(self, data):
         if not isinstance(data, Namespace):
-            raise TypeError(str(data) + " is not a Namespace!")
+            raise TypeError("Cannot push, "+str(data)+" is not a Namespace!")
         else:
             self.list.append(data)
             self.size += 1
@@ -115,10 +182,15 @@ class Stack:
         if self.size <= 0:
             raise IndexError("Tried to pop from empty stack")
         else:
-            size -= 1
-            return self.list.pop()
-            
-    def size(self):
-        return self.size
-
+            self.size -= 1
+    
+        return self.list.pop()
         
+    def peek(self):
+        """Return the top item without removing it."""
+        if self.size <= 0:
+            raise IndexError("Tried to peek from empty stack")
+        return self.list[-1]
+
+    def __str__(self):
+        return str(self.list[-self.size:])

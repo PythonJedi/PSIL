@@ -1,0 +1,13 @@
+# First ever PSIL Program.
+
+Current implementation of the language only has `def` implemented. Need to fix
+that. #
+("int" 7 def)
+("str" "Hello World!" def)
+("func" {("pi" 3.14159265 def)} def)
+(func)
+
+# I can't test namespaces because `dump` isn't implemented. 
+
+Best part about having only one builtin is that once I can interpret this, I
+shouldn't have to do anything aside from fill out and test the stdlib. #    
