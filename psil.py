@@ -48,7 +48,8 @@ class Interpreter:
             if not isinstance(code, data.Code):
                 raise TypeError("Tried to execute non-Code object "+str(code))
             elif isinstance(code, data.LLCode):
-                print(str(code)+": "+str(self.env.stack))
+                print(code)
+                print(self.env.stack)
                 print(self.arg_len_stack)
                 code.run(self) # LLCode is a superclass of any code written in python
             else:
@@ -57,8 +58,9 @@ class Interpreter:
                     print(code.name)
                 else:
                     print("Anonymous")
+                print(self.env.stack)
                 print(self.arg_len_stack)
-                self.append_env(data.Namespace(self.env, data.Stack((self.arg_len_stack.pop()-1, self.env.stack))))
+                self.append_env(data.Namespace(self.env, data.Stack(self.arg_len_stack.pop()-1, self.env.stack)))
                 
                 self.op_stream_stack.append(code.instructions())
                 return True

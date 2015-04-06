@@ -1,6 +1,6 @@
 """Builtin functions for PSIL"""
 
-from data import LLCode
+from data import LLCode, Numeric
 from parse import Token, Reference
 
 def pop(state):
@@ -14,7 +14,6 @@ def push(state, val):
 class Duplicate(LLCode):
     """Duplicate the top item on the stack."""
     def run(self, state):
-        print("dup: "+str(state.env.stack))
         push(state, state.env.stack.peek())
         
 class Out(LLCode):
@@ -29,7 +28,7 @@ class Math(LLCode):
     def grab(self, state):
         val2 = pop(state)
         val1 = pop(state)
-        if isinstance(val1, data.Numeric) and isinstance(val2, data.Numeric):
+        if isinstance(val1, Numeric) and isinstance(val2, Numeric):
             return (val1, val2)
         else:
             raise TypeError("Tried to multiply non-numerics")

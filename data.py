@@ -122,9 +122,9 @@ class Integer(Numeric):
         if not isinstance(other, Numeric):
             raise TypeError("Cannot multiply non-Numeric "+str(other))
         if isinstance(other, Integer):
-            return Integer(str(self.val*other.val))
+            return Integer(parse.Token(str(self.val*other.val)))
         elif isinstance(other, Float):
-            return Float(str(self.val*other.val))
+            return Float(parse.Token(str(self.val*other.val)))
         else:
             raise TypeError("Unrecognized Numeric "+str(other))
             
@@ -132,9 +132,9 @@ class Integer(Numeric):
         if not isinstance(other, Numeric):
             raise TypeError("Cannot subtract non-Numeric "+str(other))
         if isinstance(other, Integer):
-            return Integer(str(self.val-other.val))
+            return Integer(parse.Token(str(self.val-other.val)))
         elif isinstance(other, Float):
-            return Float(str(self.val-other.val))
+            return Float(parse.Token(str(self.val-other.val)))
         else:
             raise TypeError("Unrecognized Numeric "+str(other))
     
@@ -161,15 +161,16 @@ def instance(token):
     
 class Stack:
     """Data stack that exists during execution of a PSIL program."""
-    def __init__(self, init=None):
-        if init and len(init[1].list) >= init[0]: 
+    def __init__(self, size=None, stack=None):
+        if size and stack: 
             # initialize a shallow copy of a stack with a smaller size
-            self.list = init[1].list
-            self.size = init[0]
+            self.list = stack.list
+            self.size = size
         else:
             # new stack, original copy
             self.list = []
             self.size = 0
+        print("Created Stack with size: "+str(self.size)+"\nCan access: "+str(self.list[-self.size:]))
     
     def push(self, data):
         if not isinstance(data, Namespace):
