@@ -1,0 +1,147 @@
+Designing Interfaces for the PSIL Interpreter
+
+module parse:
+    
+    chars(file) -> characer_stream
+        Deals with iterating over a file-like object on a per-character basis
+    
+    preprocess(character_stream) -> character_stream
+        Removes comments and spaces tokens
+    
+    tokenize(character_stream) -> Token_stream
+        Deals with the meaningful tokens and produces a stream of them after 
+        running the character stream through the preprocessor
+    
+    parse(character_steream) -> Instruction_stream
+        Runs the character stream through the tokenizer and then turns the token
+        stream into instructions for the execution loop
+    
+    class Token:
+        Superclass for all tokens
+        
+        t.__init__(string) -> Token
+            string is just stored internally
+        
+        t.evaluate() -> None
+            Hook (currently unused)
+            Should be used to return an instruction based on the token
+            
+    class Comment<-Token:
+        Throwaway class for dealing with comments
+        
+        Comment.munch(character_stream) -> None
+            Pushes the iterator over the comment
+            
+    class Refrence<-Token:
+        Represents a reference to data in the namespce graph
+        
+        Reference.munch(character_stream) -> Reference
+            produces a Reference Token from a character stream
+            
+        r.evaluate() -> data.Reference
+            produces a reference object that is valid in terms of a Push 
+            Instruction
+            
+    class Expression<-Token:
+        Represents an expresson, created on end parenthesis
+        
+        e.evaluate() -> Execute
+            produces an execute instruction, as the expression token is created 
+            when a code literal should be executed.
+            
+    class Literal<-Token:
+        Superclass for all literal tokens
+        
+    class String<-Literal:
+        Represents a string literal token in the source code
+        
+        String.much(character_stream) -> String
+            creates a String from a character stream (default constructor wants 
+            a python string)
+            
+        s.evaluate() -> data.String
+            turns token into an actual data object
+            
+    class Code<-Literal:
+        Represents a code literal token
+        
+        Code.munch(character_stream) -> Code
+            creates a code literal token from charactr stream
+            
+        s.evaluate() -> data.Code
+            turns token into an actual data object
+            
+    class Numeric<-Literal:
+        Superclass for numeric types
+        
+    class Integer<-Numeric:
+        Represents an integer. Integer math generally does not apply.
+        
+    class Float<-Numeric:
+        Represents a floating point number.
+        
+    class Instruction:
+        Superclass for both instruction classes
+        
+        i.__init__(token) -> Instruction
+            Generic instruction constructor
+            
+    class Push<-Instruction:
+        Tells interpreter to push object represented by token to the stack
+        
+        p.__init__(token) -> Push
+            Have to override because push follows references and pushes a python
+            Reference to the stack
+        
+        p.run(state) -> None
+            push the python reference to the stack
+            
+    class Execute<-Instruction:
+        Tells interpreter to pop a code literal off the stack and execute it.
+        
+        e.run(state) -> None
+            
+        
+module data:
+    Python wrappers of the PSIL Data objects
+    
+    class Namespace:
+        Base class, often known as Object in other OO languages
+        
+    class Stack:
+        Implementation of the stack for the language
+    
+    class Literal<-Namespace:
+        Superclass for implementations of builtin types
+        
+    class Code<-Literal:
+        Implementation for a code literal in memory
+        
+    class LLCode<-Code:
+        Superclass for functions implemented in python
+    
+    class String<-Literal:
+        Theoretical wrapper of a PSIL String
+        
+    class Numeric<-Literal:
+        Superclass for both numeric objects
+        
+    class Integer<-Numeric:
+        PSIL Integer object wrapper
+        
+    class Float<-Numeric:
+        PSIL Float object wrapper
+        
+    module = {}
+        mapping of tokens to data objects
+        
+    instance(token) -> Namespace
+        Creates a namespace from a token.
+        
+module psil:
+    Primary interpreter module
+    
+    class Interpreter:
+        Keeps track of interpreter state and collects relevant functions
+        
+    

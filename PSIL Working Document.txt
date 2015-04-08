@@ -79,7 +79,8 @@ Introduction:
             1. the string is interpreted as a name before binding
             2. also functions as assignment, i.e. rebinding
         2. "exec" evaluates another file of code
-            1. namespaces work the same as eval
+            1. the file is considered a massive code literal in terms of the 
+               invoking function.
         3. "dump" places a reference to the local namespace on the stack
         4. "merge" combines a namespace from the stack with the local namespace
             1. best used sparingly as it overwrites current names
@@ -95,10 +96,10 @@ Introduction:
         5. "raise" raises exceptions
     
     3. Stack Manipulation:
-        1. "^" swaps top two items in the stack.
+        1. "swap" swaps top two items in the stack.
             1. useful for functions defining variables
-        2. "%" duplicates top item on stack
-            1. not useful aside from implementing stack algorithms
+        2. "dup" duplicates top item on stack
+            1. not terribly useful aside from certain simple algorithms.
     
     4. Basic IO:
         1. "in" reads in a string from stdin and places it on the stack
