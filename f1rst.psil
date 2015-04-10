@@ -2,9 +2,9 @@
 
 Current implementation of the language only has `def` implemented. Need to fix
 that. #
-("int" 7 def)
-("str" "Hello World!" def)
-("func" {("pi" 3.14159265 def)} def)
+(int 7 def)
+(str "Hello World!" def)
+(func {(pi 3.14159265 def)} def)
 (func)
 
 # I can't test namespaces because `dump` isn't implemented. 

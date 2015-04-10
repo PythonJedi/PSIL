@@ -66,7 +66,7 @@ module parse:
         Represents a code literal token
         
         Code.munch(character_stream) -> Code
-            creates a code literal token from charactr stream
+            creates a code literal token from character stream
             
         s.evaluate() -> data.Code
             turns token into an actual data object
@@ -74,11 +74,19 @@ module parse:
     class Numeric<-Literal:
         Superclass for numeric types
         
+        Numeric.munch(character_stream) -> Integer or Float
+            Returns an integer or float based on the numeric literal to be 
+            munched
+        
     class Integer<-Numeric:
         Represents an integer. Integer math generally does not apply.
+            
+        i.evaluate() -> data.Integer
         
     class Float<-Numeric:
         Represents a floating point number.
+            
+        f.evaluate() -> data.Float
         
     class Instruction:
         Superclass for both instruction classes
@@ -92,24 +100,67 @@ module parse:
         p.__init__(token) -> Push
             Have to override because push follows references and pushes a python
             Reference to the stack
-        
-        p.run(state) -> None
-            push the python reference to the stack
+            
+    class NewExpression<-Instruction:
+        Tells interpreter to consider the following instructions as part of a 
+        new expression
             
     class Execute<-Instruction:
         Tells interpreter to pop a code literal off the stack and execute it.
         
-        e.run(state) -> None
-            
-        
 module data:
     Python wrappers of the PSIL Data objects
+    
+    class Stack:
+        Implementation of the stack for the language
+        
+        s.__init__(parent=None, size=None) -> Stack
+            Initializes the stack. if stack is None, creates an empty stack,
+            otherwise use parent to implement operations, propagating size 
+            changes and keeping a local size
+            
+        s.push(namespace) -> None
+            pushes the namespace onto the stack and increases stack size by one
+        
+        s.pop() -> Namespace
+            removes the top item from the stack and decreases stack size by one
+            
+        s.peek() -> Namespace
+            returns the top item on the stack but does not remove it or modify 
+            stack size
     
     class Namespace:
         Base class, often known as Object in other OO languages
         
-    class Stack:
-        Implementation of the stack for the language
+        n.__init__(parent=None, stack=None, names**) -> Namespace
+            initializes the namespace with optional parent and stack pointers
+            names are the initial names in the namespace, useful for subclasses
+            
+        n.bind(name, namespace) -> None
+            Binds the namespace to the current namespace with the given name
+            
+        n.unbind(name) -> None
+            Remove name from the current namespace, failing silently
+            
+        n.get(name) -> Namespace
+            Return a python reference to the Namespace under name.
+        
+    class Reference<-Namespace:
+        An actual reference "object" to be used during execution. Symbolic 
+        descendant of the pointer from C/C++
+        
+        r.__init__(token) -> String
+            Pulls relevant data out of token object
+            
+        r.__iter__() -> name_stream
+            iterates over names in the stream
+            
+        r.first
+            variable that points to the first name in the reference, __getattr__
+            
+        r.previous() -> Reference
+            returns a Reference to the next-to-last namespace in the current 
+            reference
     
     class Literal<-Namespace:
         Superclass for implementations of builtin types
@@ -117,11 +168,20 @@ module data:
     class Code<-Literal:
         Implementation for a code literal in memory
         
+        c.__init__(token) -> Code
+            Pulls relevant data out of token object
+        
     class LLCode<-Code:
         Superclass for functions implemented in python
+        
+        l.__call__(state) -> None
+            Allows for calling the LLCode objects
     
     class String<-Literal:
         Theoretical wrapper of a PSIL String
+        
+        s.__init__(token) -> String
+            Pulls relevant data out of token object
         
     class Numeric<-Literal:
         Superclass for both numeric objects
@@ -129,14 +189,14 @@ module data:
     class Integer<-Numeric:
         PSIL Integer object wrapper
         
+        i.__init__(token) -> Integer
+            Pulls relevant data out of token object
+        
     class Float<-Numeric:
         PSIL Float object wrapper
         
-    module = {}
-        mapping of tokens to data objects
-        
-    instance(token) -> Namespace
-        Creates a namespace from a token.
+        f.__init__(token) -> Float
+            Pulls relevant data out of token object
         
 module psil:
     Primary interpreter module
@@ -144,4 +204,64 @@ module psil:
     class Interpreter:
         Keeps track of interpreter state and collects relevant functions
         
-    
+        i.__init__(file) -> Interpreter
+            Loads file as character stream and initializes an interpretation 
+            environment.
+            
+        i.run() -> None
+            run the interpreter loop:
+                pull instruction from the instruction stream
+                if instruction is push
+                    add namespace to stack
+                if instruction is new expression
+                    push new expression length
+                if instruction is execute
+                    pop value
+                    if value is low level code
+                        run low level code
+                    if value is code literal
+                        append anonymous namespace
+                        push code literal stream to instruction stream stack
+                    if value is reference
+                        dereference as code
+                        assert code is a data.Code
+                        append environment to code, setting search path
+            
+        i.search(reference) -> Namespace
+            properly uses the search_up and search_down methods to dereference a
+            reference object
+            
+        i.search_up(reference) -> Namespace
+            First phase of name searching. Searches up the path defined by 
+            parent links. returns the Namespace containing reference.first
+            
+        i.search_down(reference, namespace) -> Namspace
+            Second phase of name searching. given a reference and the namespace 
+            to start with, follow the reference down the named data, returning 
+            the final item.
+            
+        i.append_environment(reference=None) -> None
+            Add a new environment with a stack size equal to the current 
+            expression size
+            if reference is not None, follow reference, building the search path
+            along the reference path, then append the new environment.
+            
+        i.pop_environment() ->
+            moves the environment up the search path until the previous 
+            environment is found
+            
+        is.__iter__() -> InstructionStream
+            return self to implement the iterator interface
+            
+        is.__next__() -> parse.Instruction
+            pull an item from queue at the top of the stack
+            if stream is empty
+                pull it from stream stack
+                save current stack size
+                pop environment
+                add stack size to expression size
+                return item from new queue at top of stack
+            
+        is.push(stream) -> None
+            push stream onto the stream stack, redirecting execution to the new 
+            stream.

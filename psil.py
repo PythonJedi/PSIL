@@ -9,11 +9,11 @@ import data, parse, stdlib
 
 class Interpreter:
     def __init__(self, file):
-        self.char_stream = file
+        self.char_stream = parse.chars(file)
         self.env = data.Namespace(None, data.Stack())
         for p in stdlib.builtins.items():
             self.env.bind(p[1], p[0])
-        self.op_stream_stack = [parse.parse(parse.chars(file))] 
+        self.op_stream_stack = [parse.parse(self.char_stream)] 
         self.op_stream = None
         self.arg_len_stack = []
         
