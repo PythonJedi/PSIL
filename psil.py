@@ -103,6 +103,31 @@ class Interpreter:
         assert not self.env == env
         env.parent = self.env
         self.env = env
+        
+    def deref(self, name):
+        if not name.string: # empty ref
+            return self
+        nm = name.copy()
+        start = self.search_up(name)
+        val = start.search_down(name)
+        val.name = nm # need unmodified copy
+        return val
+    
+    def search_up(self, name):
+        if self.validate(name[0]):
+            return self
+        elif self.parent: # name not found, but not root namespace
+            return self.parent.search_up(name) # Namespace.search_up(self.parent, name)
+        else: # root namespace, name not found
+            raise AttributeError(str(name)+" not found in namespace tree.")
+
+    def search_down(self, name):
+        if not name.names:
+            return self # finished search successfully
+        elif self.validate(name[0]):
+            return self.dict[name[0]].search_down(name.next())
+        else:
+            raise AttributeError(str(name)+" not found in namespace tree.")
     
     
 if __name__ == "__main__":

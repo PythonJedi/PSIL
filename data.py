@@ -8,56 +8,32 @@ import parse
 
 class Namespace:
     """Represents the type of a namespace, the catchall type."""
-    def __init__(self, parent=None, stack=None):
-        self.dict = {}
+    def __init__(self, parent=None, stack=None, kwdarg**):
+        self.dict = kwdarg
         self.parent = parent # "reversed" linked list of execution namespaces
         self.stack = stack
     
-    def bind(self, ns, id):
+    def bind(self, ns, name):
         if not isinstance(ns, Namespace):
             raise TypeError(str(ns) +" is not a namespace.")
         else:
-            self.dict[id]=ns
+            self.dict[name]=ns
             ns.parent = None # references do not point back, solves aliasing
-            #print("Bound "+str(ns)+" to "+id+" in "+str(self))
             
-    def unbind(self, id):
-        if self.validate(id):
-            del self.dict[id]
+    def unbind(self, name):
+        if self.validate(name):
+            del self.dict[name]
         # fail quiet on deletion that doesn't exist
         
-    def grab(self, id):
-        if self.validate(id):
-            return self.dict[id]
-    
-    def deref(self, name):
-        if not name.string: # empty ref
-            return self
-        nm = name.copy()
-        start = self.search_up(name)
-        val = start.search_down(name)
-        val.name = nm # need unmodified copy
-        return val
-        
-    def validate(self, id):
-        """Return whether id is a valid identifier for this namespace."""
-        return id in self.dict
-    
-    def search_up(self, name):
-        if self.validate(name[0]):
-            return self
-        elif self.parent: # name not found, but not root namespace
-            return self.parent.search_up(name) # Namespace.search_up(self.parent, name)
-        else: # root namespace, name not found
-            raise AttributeError(str(name)+" not found in namespace tree.")
-
-    def search_down(self, name):
-        if not name.names:
-            return self # finished search successfully
-        elif self.validate(name[0]):
-            return self.dict[name[0]].search_down(name.next())
+    def get(self, name):
+        if self.validate(name):
+            return self.dict[name]
         else:
-            raise AttributeError(str(name)+" not found in namespace tree.")
+            raise AttributeError(name+" not found in "+str(self.dict.keys()))
+            
+    def validate(self, name):
+        """Return whether id is a valid identifier for this namespace."""
+        return name in self.dict
             
     def __str__(self):
         return "this: "+repr(self)+"\n"+\
@@ -67,7 +43,27 @@ class Namespace:
                
 class Reference(Namespace):
     """Pointer equivalent in PSIL"""
-    def __init__
+    def __init__(self, seed):
+        if isinstance(seed, str):
+            self.string = seed
+        else:
+            self.string = seed.string
+        self.names = self.string.split(":")
+        
+    def __iter__(self):
+        return iter(self.names)
+    
+    def __getattr__(self, name):
+        if name == "first":
+            return self.names[0]
+        elif name = "last":
+            return self.names[-1]
+            
+    def previous(self):
+        """Returns a copy of the reference without this reference's last name.
+        
+        returns empty Reference if this Reference has a single name."""
+        return Reference(":".join(self.names[:-2]))
 
 class Literal(Namespace):
     """Superclass for all the literal types in PSIL."""

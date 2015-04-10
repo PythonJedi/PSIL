@@ -1,8 +1,10 @@
 # Trying to see if I can implement a factorial function. #
 
 (fac {
-    (dup) # could assign to local namespace, but more efficient to dupe #
-    ( ( (1 sub) fac) mul) # n! = n * (n-1)! -> n! = (n ((n 1 -) !) *) #
+    (dup) 
+    # could assign to local namespace, but more efficient to dupe #
+    ( ( (1 sub) fac) mul) 
+    # n! = n * (n-1)! -> n! = (n ((n 1 -) !) *) #
 } def)
 
 ((3 fac) out)

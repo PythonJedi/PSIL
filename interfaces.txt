@@ -149,7 +149,7 @@ module data:
         An actual reference "object" to be used during execution. Symbolic 
         descendant of the pointer from C/C++
         
-        r.__init__(token) -> String
+        r.__init__(token) -> Reference
             Pulls relevant data out of token object
             
         r.__iter__() -> name_stream
