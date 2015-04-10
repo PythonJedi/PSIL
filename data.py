@@ -90,7 +90,11 @@ class Code(Literal):
 class LLCode(Code):
     """Superclass for any code not implemented in PSIL
     
-    This code is invoked by calling code.run(env) in the Execute instruction."""
+    This code is invoked by calling the LLCode object during the Execute 
+    instruction."""
+    def __call__(state):
+        """Hook for subclasses."""
+        pass 
     
 class String(Literal):
     """Type for a string literal.
@@ -110,8 +114,11 @@ class Numeric(Literal):
     
 class Integer(Numeric):
     """Type for integer data in PSIL."""
-    def __init__(self, token):
-        self.val = int(token.string)
+    def __init__(self, seed):
+        if isinstance(seed, str):
+            self.val = int(seed)
+        else:
+            self.val = int(token.string)
         super().__init__()
         
     def __str__(self):
@@ -139,8 +146,11 @@ class Integer(Numeric):
     
 class Float(Numeric):
     """Type for integer data in PSIL."""
-    def __init__(self, token):
-        self.val = float(token.string)
+    def __init__(self, seed):
+        if isinstance(seed, str):
+            self.val = float(seed)
+        else:
+            self.val = float(token.string)
         super().__init__()
         
     def __str__(self):
@@ -151,34 +161,37 @@ class Stack:
     def __init__(self, size=None, stack=None):
         if size and stack: 
             # initialize a shallow copy of a stack with a smaller size
-            self.list = stack.list
+            self.stack = stack
             self.size = size
         else:
             # new stack, original copy
-            self.list = []
+            self.stack = []
             self.size = 0
-        print("Created Stack with size: "+str(self.size)+"\nCan access: "+str(self.list[-self.size:]))
     
-    def push(self, data):
+    def append(self, data):
         if not isinstance(data, Namespace):
             raise TypeError("Cannot push, "+str(data)+" is not a Namespace!")
         else:
-            self.list.append(data)
+            self.stack.append(data)
             self.size += 1
     
     def pop(self):
         if self.size <= 0:
             raise IndexError("Tried to pop from empty stack")
         else:
+            val = self.stack.pop()    
             self.size -= 1
-    
-        return self.list.pop()
+        return val
         
     def peek(self):
         """Return the top item without removing it."""
         if self.size <= 0:
             raise IndexError("Tried to peek from empty stack")
-        return self.list[-1]
+        else:
+            if isinstance(self.stack, Stack):
+                return self.stack.peek()
+            else:
+                return self.stack[-1]
 
     def __str__(self):
         return str(self.list[-self.size:])
