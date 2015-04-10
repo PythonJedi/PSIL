@@ -1,7 +1,7 @@
 """Builtin functions for PSIL"""
 
-from data import LLCode, Numeric
-from parse import Token, Reference
+from data import LLCode, Numeric, Reference
+from parse import Token
 
 def pop(state):
     """Got tired of writing "state.env.stack" """
@@ -9,60 +9,75 @@ def pop(state):
     
 def push(state, val):
     """See above"""
-    state.env.stack.push(val)
+    state.env.stack.append(val)
 
 class Duplicate(LLCode):
-    """Duplicate the top item on the stack."""
-    def run(self, state):
-        push(state, state.env.stack.peek())
+    """Duplicate the top item on the stack.
+    
+    actually copies objects, but references are themselves copied, so 
+    duplicating a reference and then manipulating the object the reference is 
+    pointing to changes the object the second reference is pointed to as 
+    well."""
+    def __call__(self, state):
+        val = state.env.stack.peek()
+        new = (type(val))(val)
+        push(state, new)
         
 class Out(LLCode):
     """Sends top item on stack to stdout.
     
     "Proper" I/O will be handled later."""
-    def run(self, state):
-        print(pop(state))
+    def __call__(self, state):
+        print(str(pop(state)))
+        
+class Get(LLCode):
+    """Dereference a Reference."""
+    def __call__(self, state):
+        ref = pop(state)
+        assert isinstance(ref, Reference)
+        push(state, state.search(ref))
         
 class Math(LLCode):
     """Superclass for math operations with useful helper functions."""
-    def grab(self, state):
+    def binary(self, state):
+        """pull two items off and return them in the correct order."""
         val2 = pop(state)
         val1 = pop(state)
         if isinstance(val1, Numeric) and isinstance(val2, Numeric):
             return (val1, val2)
         else:
-            raise TypeError("Tried to multiply non-numerics")
+            raise TypeError("Tried to math non-numerics")
         
         
 class Multiply(Math):
     """Multiply the top two items from the stack"""
-    def run(self, state):
-        v1, v2 = self.grab(state)
+    def __call__(self, state):
+        v1, v2 = self.binary(state)
         push(state, v1*v2)
         
 class Subtract(Math):
     """subtract the second item on the stack by the top"""
-    def run(self, state):
-        v1, v2 = self.grab(state)
+    def __call__(self, state):
+        v1, v2 = self.binary(state)
         push(state, v1-v2)
     
 class Bind(LLCode):
     """Pull a value and a name off the stack and bind them in the namespace."""
-    def run(self, state):
+    def __call__(self, state):
         val = pop(state)
         name = pop(state)
-        ref = Reference(name.string)
-        ns = state.env.deref(ref.prev())
-        ns.bind(val, ref[-1])
+        ns = state.search(name.previous())
+        ns.bind(val, name.last)
         
 builtins = {
-    "def" : Bind(Token("#Builtin def#")),
+    "def" : Bind(),
+    "get" : Get(),
     
-    "dup" : Duplicate(Token("#Builtin dup#")),
+    "dup" : Duplicate(),
     
-    "out" : Out(Token("#Builtin out#")),
+    "out" : Out(),
     
-    "sub" : Subtract(Token("#Builtin sub#")),
-    "mul" : Multiply(Token("#Builtin mul#"))
+    "sub" : Subtract(),
+    "mul" : Multiply()
     
     }

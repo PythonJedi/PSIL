@@ -267,13 +267,17 @@ module psil:
             return self to implement the iterator interface
             
         is.__next__() -> parse.Instruction
-            pull an item from queue at the top of the stack
-            if stream is empty
-                pull it from stream stack
-                save current stack size
-                pop environment
-                add stack size to expression size
-                return item from new queue at top of stack
+            while there is no item to return and still streams
+                pull an item from queue at the top of the stack
+                if stream is empty
+                    pull it from stream stack
+                    add stack size to expression size
+                    pop environment
+            if there is an item
+                return item
+            else
+                signal to stop iterating
+            
             
         is.push(stream) -> None
             push stream onto the stream stack, redirecting execution to the new 

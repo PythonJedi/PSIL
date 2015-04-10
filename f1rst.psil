@@ -6,6 +6,7 @@ that. #
 (str "Hello World!" def)
 (func {(pi 3.14159265 def)} def)
 (func)
+((str get) out)
 
 # I can't test namespaces because `dump` isn't implemented. 
 

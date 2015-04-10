@@ -8,10 +8,15 @@ import parse
 
 class Namespace:
     """Represents the type of a namespace, the catchall type."""
-    def __init__(self, parent=None, stack=None, kwdarg**):
-        self.dict = kwdarg
-        self.parent = parent # "reversed" linked list of execution namespaces
-        self.stack = stack
+    def __init__(self, stack=None, parent=None, **kwdarg):
+        if isinstance(stack, Namespace): # copy intended:
+            self.dict = dict(stack.dict)
+            self.parent = None # copying search path could be dangerous
+            self.stack = None # stack references screw up name searching.
+        else:
+            self.dict = kwdarg
+            self.parent = parent # "reversed" linked list of execution namespaces
+            self.stack = stack
     
     def bind(self, ns, name):
         if not isinstance(ns, Namespace):
@@ -46,7 +51,9 @@ class Reference(Namespace):
     def __init__(self, seed):
         if isinstance(seed, str):
             self.string = seed
-        else:
+        elif isinstance(seed, Reference):
+            self.string = seed.string[:] # force copy
+        elif isinstance(seed, parse.Token):
             self.string = seed.string
         self.names = self.string.split(":")
         
@@ -55,15 +62,24 @@ class Reference(Namespace):
     
     def __getattr__(self, name):
         if name == "first":
-            return self.names[0]
-        elif name = "last":
-            return self.names[-1]
+            if self.names:
+                return self.names[0]
+            else:
+                return None
+        elif name == "last":
+            if self.names:
+                return self.names[-1]
+            else:
+                return None
             
     def previous(self):
         """Returns a copy of the reference without this reference's last name.
         
         returns empty Reference if this Reference has a single name."""
         return Reference(":".join(self.names[:-2]))
+        
+    def __str__(self):
+        return self.string
 
 class Literal(Namespace):
     """Superclass for all the literal types in PSIL."""
@@ -73,8 +89,10 @@ class Literal(Namespace):
 class Code(Literal):
     """Type for a code literal."""
     def __init__(self, token=None):
-        if token:
+        if isinstance(token, parse.Token):
             self.string = token.string
+        elif isinstance(token, Code):
+            self.string = token.string[:]
         else:
             self.string = "<Builtin>"
         super().__init__()
@@ -84,7 +102,7 @@ class Code(Literal):
             self.op_list = [op for op in parse.parse(iter(self.string))]
         return iter(self.op_list)
         
-    def __str__(self):
+    def __repr__(self):
         return "PSIL Code Literal: "+str(self.string)
             
 class LLCode(Code):
@@ -92,7 +110,7 @@ class LLCode(Code):
     
     This code is invoked by calling the LLCode object during the Execute 
     instruction."""
-    def __call__(state):
+    def __call__(self, state):
         """Hook for subclasses."""
         pass 
     
@@ -103,25 +121,35 @@ class String(Literal):
     concept."""
     def __init__(self, token):
         """Creates the actual data object from the token representing it."""
-        self.string = token.string
+        if isinstance(token, String):
+            self.string = str(token.string)
+        else:
+            self.string = token.string
         super().__init__()
         
-    def __str__(self):
+    def __repr__(self):
         return "PSIL String: "+self.string
+        
+    def __str__(self):
+        return self.string
         
 class Numeric(Literal):
     """Type superclass for numbers in PSIL."""
+    def __str__(self):
+        return str(self.val)
     
 class Integer(Numeric):
     """Type for integer data in PSIL."""
     def __init__(self, seed):
         if isinstance(seed, str):
             self.val = int(seed)
+        elif isinstance(seed, Integer):
+            self.val = int(seed.val)
         else:
-            self.val = int(token.string)
+            self.val = int(seed.string)
         super().__init__()
         
-    def __str__(self):
+    def __repr__(self):
         return "PSIL Integer: "+str(self.val)
         
     def __mul__(self, other):
@@ -149,8 +177,10 @@ class Float(Numeric):
     def __init__(self, seed):
         if isinstance(seed, str):
             self.val = float(seed)
+        elif isinstance(seed, Float):
+            self.val = float(seed.val)
         else:
-            self.val = float(token.string)
+            self.val = float(seed.string)
         super().__init__()
         
     def __str__(self):

@@ -10,7 +10,7 @@ import data, parse, stdlib
 class Interpreter:
     def __init__(self, file):
         self.char_stream = parse.chars(file)
-        self.env = data.Namespace(None, data.Stack(), stdlib.builtins**)
+        self.env = data.Namespace(data.Stack(), None, **stdlib.builtins)
         self.op_stream_stack = [parse.parse(self.char_stream)] 
         self.arg_len_stack = []
         
@@ -21,7 +21,7 @@ class Interpreter:
         try:
             for op in self:
                 if isinstance(op, parse.Push):
-                    self.env.stack.push(op.value)
+                    self.env.stack.append(op.value)
                     
                 elif isinstance(op, parse.NewExpression):
                     self.arg_len_stack.append(0)
@@ -65,10 +65,9 @@ class Interpreter:
                 self.env = start
         
         # Add new namespace
-        self.env = data.Namespace(self.env,
-                                  data.Stack(self.arg_len_stack.pop(),
-                                             self.env.stack)
-                                 )
+        self.env = data.Namespace(data.Stack(self.arg_len_stack.pop(),
+                                             self.env.stack),
+                                 self.env)
                 
     def pop_env(self):
         """Moves the environment back to the previous execution namespace.
@@ -82,30 +81,48 @@ class Interpreter:
             self.env = self.env.parent
             temp.parent = None
         
-    def search(self, name):
-        if not name.string: # empty ref
-            return self
-        nm = name.copy()
-        start = self.search_up(name)
-        val = start.search_down(name)
-        val.name = nm # need unmodified copy
-        return val
-    
-    def search_up(self, name):
-        if self.validate(name[0]):
-            return self
-        elif self.parent: # name not found, but not root namespace
-            return self.parent.search_up(name) # Namespace.search_up(self.parent, name)
-        else: # root namespace, name not found
-            raise AttributeError(str(name)+" not found in namespace tree.")
-
-    def search_down(self, name):
-        if not name.names:
-            return self # finished search successfully
-        elif self.validate(name[0]):
-            return self.dict[name[0]].search_down(name.next())
+    def search(self, reference):
+        if reference.last: # verifies reference is not empty
+            return self.search_down(reference, self.search_up(reference))
         else:
-            raise AttributeError(str(name)+" not found in namespace tree.")
+            return self.env
+        
+    def search_up(self, reference):
+        ns = self.env
+        while ns and not ns.validate(reference.first):
+            ns = ns.parent
+        if ns == None:
+            raise NameError(str(reference)+" not found.")
+        else:
+            return ns
+    
+    def search_down(self, reference, namespace):
+        for name in reference:
+            if namespace.validate(name):
+                namespace = namespace.get(name)
+            else:
+                raise AttributeError(name+" not found in "+str(namespace))
+        return namespace
+        
+    def push(self, code):
+        self.op_stream_stack.append(iter(code))
+        
+    def __iter__(self):
+        return self
+        
+    def __next__(self):
+        op = None
+        while not op and self.op_stream_stack:
+            try:
+                op = self.op_stream_stack[-1].__next__() # just need one
+            except StopIteration:
+                self.op_stream_stack.pop()
+                self.arg_len_stack[-1] += self.env.stack.size
+                self.pop_env()
+        if op:
+            return op
+        else: # op_stream_stack is empty
+            raise StopIteration()
     
     
 if __name__ == "__main__":
