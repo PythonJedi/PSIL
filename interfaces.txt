@@ -208,6 +208,15 @@ module psil:
     class Interpreter:
         Keeps track of interpreter state and collects relevant functions
         
+        i.instruction_stream_stack
+            stack of instruction streams accessed by __iter__
+        
+        i.expression_size_stack
+            sizes of expressions as they're built up
+            
+        i.env
+            current execution environment, contains stack
+        
         i.__init__(file) -> Interpreter
             Loads file as character stream and initializes an interpretation 
             environment.

@@ -10,11 +10,8 @@ import data, parse, stdlib
 class Interpreter:
     def __init__(self, file):
         self.char_stream = parse.chars(file)
-        self.env = data.Namespace(None, data.Stack())
-        for p in stdlib.builtins.items():
-            self.env.bind(p[1], p[0])
+        self.env = data.Namespace(None, data.Stack(), stdlib.builtins**)
         self.op_stream_stack = [parse.parse(self.char_stream)] 
-        self.op_stream = None
         self.arg_len_stack = []
         
     def run(self):
@@ -22,18 +19,19 @@ class Interpreter:
         
         if file is stdin, interactive mode should be used."""
         try:
-            while self.op_stream_stack and self.env:
-                self.op_stream = self.op_stream_stack.pop()
-                for ins in self.op_stream:
-                    jump = self.op(ins)
-                    if jump:
-                        break
-                if not jump:  # finished executing expression
-                    # need to add the remaining items on the stack as inputs to 
-                    # the next expression.
-                    
-                    self.clean_search_path()
-                    
+            for op in self:
+                if isinstance(op, parse.Push):
+                    self.env.stack.push(op.value)
+                elif isinstance(op, parse.NewExpression):
+                    self.arg_len_stack.append(0)
+                elif isinstance(op, parse.Execute):
+                    value = self.env.stack.pop()
+                    if isinstance(value, data.LLCode):
+                        value(self)
+                    elif isinstance(value, data.Code):
+                        self.append_env()
+                        self.push(iter(value))
+                    elif isinstance(value, data.Reference):
                         
         except Exception as e:
             #print(self.env.stack)
