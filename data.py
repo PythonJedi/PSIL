@@ -79,7 +79,7 @@ class Code(Literal):
             self.string = "<Builtin>"
         super().__init__()
         
-    def instructions(self):
+    def __iter__(self):
         if not hasattr(self, "op_list"):
             self.op_list = [op for op in parse.parse(iter(self.string))]
         return iter(self.op_list)

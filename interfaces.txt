@@ -170,6 +170,10 @@ module data:
         
         c.__init__(token) -> Code
             Pulls relevant data out of token object
+            
+        c.__iter__() -> instruction_stream
+            parses string if instructions empty, returns iterator over 
+            instructions
         
     class LLCode<-Code:
         Superclass for functions implemented in python
