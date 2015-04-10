@@ -29,19 +29,19 @@ TOKENTEST = """
 def preprocess(char_stream):
     """Preprocess the inbound character stream.
     
-    This mainly removes comments and inflates expressions."""
+    This removes comments and spaces out tokens."""
     for c in char_stream:
         if c == "#":
             Comment.munch(char_stream)
-            continue
+            continue # no need to pass comments on to tokenizer
         elif c in ")}":
             yield " "
         elif c in "({":
-            yield c # makes the text stream cleaner
+            yield c 
             c = " "
         elif c == "\n":
             continue # newlines mean nothing
-        yield c # this means that the ')' are passed back 
+        yield c # this means that the ')' and '}' are passed back 
 
 def tokenize(char_stream):
     """tokenize the character stream.
@@ -50,43 +50,21 @@ def tokenize(char_stream):
     language is impossible with a regex tokenizer."""
     
     preproc = preprocess(char_stream)
-    expr_size = []  #stack to keep track of the size of the current expression
     for c in preproc:
-        #print(c)
         if c in " \t\n": # Whitespace not inside a string literal
             continue # run to the next iteration
         elif c == "(": # start new expression
-            if expr_size: # empty expression size stack means root expression
-                expr_size.append(expr_size.pop()+1) # expression counts as element in encapsulating expression
-            expr_size.append(0) # make a new entry in the expression tracker
-            
+            yield StartExpression(c)
         elif c == ")": # finish expression
-            yield Expression(expr_size.pop()-1)
-            # need to subtract one because the code literal that is executed shouldn't count
+            yield EndExpression(c)
         elif c == "{":
-            if expr_size:
-                expr_size.append(expr_size.pop()+1)
-            else:
-                raise SyntaxError("Code literal outside expression!")
             yield Code.munch(preproc) # eats end curly brace
         else: # Reference, numeric literal, string, or error
             if c == "\"": # Beginning of string literal
-                if expr_size:
-                    expr_size.append(expr_size.pop()+1)
-                else:
-                    raise SyntaxError("String literal outside expression!")
                 yield String.munch(preproc) # eats end quote
-            elif c.isdigit() or c in ".-": # numeric literal
-                if expr_size:
-                    expr_size.append(expr_size.pop()+1)
-                else:
-                    raise SyntaxError("Numeric literal outside expression!")
+            elif c.isdigit() or c in ".-+": # numeric literal
                 yield Numeric.munch(c, preproc) # c is the first character
             else: # Reference or syntax error
-                if expr_size:
-                    expr_size.append(expr_size.pop()+1)
-                else:
-                    raise SyntaxError("String literal outside expression!")
                 yield Reference.munch(c, preproc) # c is the first character
                 
 def parse(char_stream):
@@ -95,14 +73,8 @@ def parse(char_stream):
     generates a stream of Instruction objects."""
     tokens = tokenize(char_stream)
     for t in tokens:
-        # print(t)
-        if isinstance(t, Reference):
-            yield Push(t)
-        elif isinstance(t, Literal):
-            yield Push(data.instance(t))
-        elif isinstance(t, Expression):
-            yield Execute(t.size)
-            
+        yield t.evaluate()
+        
 def chars(file):
     """turns a file like object into a character stream"""
     for line in file:
@@ -127,7 +99,7 @@ class Comment(Token):
         for c in iter:
             if c == "#":
                 return # comments mean nothing, just need to push the iterator over them
-        raise SyntaxError("Unclosed comment in parsed string!")
+        raise SyntaxError("Unclosed comment in parsed code!")
 
 class Reference(Token):
     """A reference to some namespace in the namespace tree.
@@ -147,43 +119,24 @@ class Reference(Token):
         
     def __init__(self, string):
         self.string = string
-        self.names = string.split(":")
-        
-    def __getitem__(self, index):
-        if not isinstance(index, int):
-            raise TypeError("References can only be indexed by integers!")
-        else:
-            return self.names[index]
-    def next(self):
-        """Move to the next name.
-        
-        returns self after popping the first item in self.names"""
-        self.names.pop(0)
-        return self
-        
-    def prev(self):
-        """reference to the namespace that contains the one referenced"""
-        if len(self.names) > 1:
-            return Reference(":".join(self.names[:-1]))
-        else:
-            return Reference("")
-        
-    def copy(self):
-        return Reference(repr(self)) # stupid, yes, but it works
     
-    def __repr__(self):
-        return ":".join(self.names)
+    def evaluate(self):
+        return Push(data.Reference(self))
         
     def __str__(self):
         return "PSIL Reference Token: "+self.string
+        
+class StartExpression(Token):
+    """Delineates the start of an expression.
     
-class Expression(Token):
-    """Triggers the creation of an Execute Instruction."""
-    def __init__(self, size):
-        self.size = size
-    
+    Turns into a NewExpression instruction."""
     def evaluate(self):
-        return Execute()
+        return NewExpression(self)
+    
+class EndExpression(Token):
+    """Triggers the creation of an Execute Instruction."""
+    def evaluate(self):
+        return Execute(self)
         
     def __str__(self):
         return "PSIL Expression, size: "+str(self.size)
@@ -214,7 +167,7 @@ class String(Literal):
         return "PSIL String Token: "+self.string
         
     def evaluate(self):
-        return Push(data.String(self.string))
+        return Push(data.String(self))
     
     
 class Code(Literal):
@@ -233,6 +186,10 @@ class Code(Literal):
             
     def __init__(self, string):
         self.string = string
+        
+    def evaluate(self):
+        return Push(data.Code(self))
+        
     def __str__(self):
         return "PSIL Code Literal Token: "+self.string
     
@@ -259,40 +216,55 @@ class Numeric(Literal):
     
 class Integer(Numeric):
     """Token for Integer literals."""
-    def __init__(self, string):
-        self.string = string
+    
+    def evaluate(self):
+        return Push(data.Integer(self))
+    
     def __str__(self):
         return "PSIL Integer Token: "+self.string
         
 class Float(Numeric):
     """Token for floating point literals."""
-    def __init__(self, string):
-        self.string = string
+    def evaluate(self):
+        return Push(data.Float(self))
+    
     def __str__(self):
         return "PSIL Float Token: "+self.string
-    
-## Begin instruction classes
+
+#========================== #
+# Begin instruction classes #
+#========================== #
 
 class Instruction:
     """A single instruction for the PSIL virtual machine.
     
-    These are the implied actions: push, dereference, and execute. All other actions in the language are invoked like any other """
+    These are the actions that the interpreter needs to take to let the language
+    take care of the rest of itself. NewExpression isn't explicitly needed, but 
+    makes runtime errors easier to trace."""
+    def __init__(self, token):
+        pass # Don't need to do anything with the token
+    
     
 class Push(Instruction):
     """Push a literal on the stack."""
-    def __init__(self, value):
-        self.value=value
+    def __init__(self, obj):
+        self.value=obj
         
     def __str__(self):
         return "PUSH "+str(self.value)
+        
+class NewExpression(Instruction):
+    """Trigger for creation of a new expression.
+    
+    Allows the interpreter to keep track of the "parameters" for a given 
+    expression."""
+    def __str__(self):
+        return "NEW EXPRESSION"
 
 class Execute(Instruction):
     """Execute a code literal off the top of the stack."""
-    def __init__(self, tokens):
-        self.num_tokens = tokens
-        
     def __str__(self):
-        return "EXECUTE (tokens: "+str(self.num_tokens)+")"
+        return "EXECUTE"
 
 if __name__ == "__main__":
     for i in parse(iter(TOKENTEST)):

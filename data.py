@@ -65,6 +65,9 @@ class Namespace:
                "Children: "+str(self.dict)+"\n"+\
                "parent: \n\\\n"+str(self.parent)+"\n/\n"
                
+class Reference(Namespace):
+    """Pointer equivalent in PSIL"""
+    def __init__
 
 class Literal(Namespace):
     """Superclass for all the literal types in PSIL."""
@@ -146,18 +149,6 @@ class Float(Numeric):
         
     def __str__(self):
         return "PSIL Float: "+str(self.val)
-        
-mapping = {
-    parse.Code: Code,
-    parse.String: String,
-    parse.Integer: Integer,
-    parse.Float: Float
-    }
-def instance(token):
-    """Create an instance of any namespace from a token"""
-    
-    if type(token) in mapping:
-        return mapping[type(token)](token) # index by token, __init__(token)
     
 class Stack:
     """Data stack that exists during execution of a PSIL program."""
