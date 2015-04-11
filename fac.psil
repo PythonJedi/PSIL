@@ -1,8 +1,9 @@
 # Trying to see if I can implement a factorial function. #
 
 (fac {
-    (dup)
-    ( ( ( 1 sub) fac) mul) 
+    ((n swap) def)
+    ((n get) out)
+    (n ((n 1 sub) fac) mul) 
 } def)
 
 ((3 fac) out)

@@ -23,6 +23,13 @@ class Duplicate(LLCode):
         new = (type(val))(val)
         push(state, new)
         
+class Swap(LLCode):
+    """Swaps the two items on the top of the stack."""
+    def __call__(self, state):
+        top, under = pop(state), pop(state)
+        push(state, top)
+        push(state, under)
+        
 class Out(LLCode):
     """Sends top item on stack to stdout.
     
@@ -43,6 +50,12 @@ class Math(LLCode):
         """pull two items off and return them in the correct order."""
         val2 = pop(state)
         val1 = pop(state)
+        # implicit deref
+        if isinstance(val1, Reference):
+            val1 = state.search(val1)
+        if isinstance(val2, Reference):
+            val2 = state.search(val2)
+            
         if isinstance(val1, Numeric) and isinstance(val2, Numeric):
             return (val1, val2)
         else:
@@ -74,6 +87,7 @@ builtins = {
     "get" : Get(),
     
     "dup" : Duplicate(),
+    "swap": Swap(),
     
     "out" : Out(),
     

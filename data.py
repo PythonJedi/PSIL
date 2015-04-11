@@ -56,21 +56,14 @@ class Reference(Namespace):
         elif isinstance(seed, parse.Token):
             self.string = seed.string
         self.names = self.string.split(":")
+        if self.names:
+            self.first = self.names[0]
+            self.last = self.names[-1]
+        else:
+            self.first = self.last = None
         
     def __iter__(self):
         return iter(self.names)
-    
-    def __getattr__(self, name):
-        if name == "first":
-            if self.names:
-                return self.names[0]
-            else:
-                return None
-        elif name == "last":
-            if self.names:
-                return self.names[-1]
-            else:
-                return None
             
     def previous(self):
         """Returns a copy of the reference without this reference's last name.
@@ -80,6 +73,9 @@ class Reference(Namespace):
         
     def __str__(self):
         return self.string
+        
+    def __repr__(self):
+        return "PSIL Reference: "+self.string
 
 class Literal(Namespace):
     """Superclass for all the literal types in PSIL."""
@@ -189,7 +185,7 @@ class Float(Numeric):
 class Stack:
     """Data stack that exists during execution of a PSIL program."""
     def __init__(self, size=None, stack=None):
-        if size and stack: 
+        if size and stack:
             # initialize a shallow copy of a stack with a smaller size
             self.stack = stack
             self.size = size
@@ -223,5 +219,11 @@ class Stack:
             else:
                 return self.stack[-1]
 
+    def _str(self, size):
+        if isinstance(self.stack, list):
+            return str(self.stack[-size:])
+        else:
+            return self.stack._str(size)
+            
     def __str__(self):
-        return str(self.list[-self.size:])
+        return self._str(self.size)

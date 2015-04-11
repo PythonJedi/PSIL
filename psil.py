@@ -22,6 +22,7 @@ class Interpreter:
             for op in self:
                 if isinstance(op, parse.Push):
                     self.env.stack.append(op.value)
+                    self.arg_len_stack[-1] += 1
                     
                 elif isinstance(op, parse.NewExpression):
                     self.arg_len_stack.append(0)
@@ -39,6 +40,7 @@ class Interpreter:
                     
                         if isinstance(code, data.LLCode):
                             code(self)
+                            self.arg_len_stack.pop()
                         
                         else:
                             self.append_env(value)
@@ -54,6 +56,7 @@ class Interpreter:
         If a reference is given the new environment is appended below the 
         namespace pointed to by that reference, with the search path pointing up
         through the reference."""
+        stack = self.env.stack # Need to get reference before traversing
         if reference: # set search path
             start = self.search_up(reference)
             for name in reference:
@@ -64,11 +67,12 @@ class Interpreter:
                     raise AttributeError("Failed to find "+str(name))
                 self.env = start
         
-        # Add new namespace
+        # make new namespace
         self.env = data.Namespace(data.Stack(self.arg_len_stack.pop(),
-                                             self.env.stack),
+                                             stack),
                                  self.env)
-                
+        print(self.env)
+        
     def pop_env(self):
         """Moves the environment back to the previous execution namespace.
         
