@@ -35,7 +35,7 @@ class Out(LLCode):
     
     "Proper" I/O will be handled later."""
     def __call__(self, state):
-        print(str(pop(state)))
+        print(">_< "+str(pop(state)))
         
 class Get(LLCode):
     """Dereference a Reference."""

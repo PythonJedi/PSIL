@@ -20,6 +20,7 @@ class Interpreter:
         if file is stdin, interactive mode should be used."""
         try:
             for op in self:
+                #print(op)
                 if isinstance(op, parse.Push):
                     self.env.stack.append(op.value)
                     self.arg_len_stack[-1] += 1
@@ -29,6 +30,7 @@ class Interpreter:
                     
                 elif isinstance(op, parse.Execute):
                     value = self.env.stack.pop()
+                    self.arg_len_stack[-1] -= 1
                     
                     if isinstance(value, data.Code):
                         self.append_env()
@@ -45,6 +47,7 @@ class Interpreter:
                         else:
                             self.append_env(value)
                             self.push(iter(code))
+                #print(self.arg_len_stack)
                         
         except Exception as e:
             #print(self.env.stack)
@@ -71,7 +74,6 @@ class Interpreter:
         self.env = data.Namespace(data.Stack(self.arg_len_stack.pop(),
                                              stack),
                                  self.env)
-        print(self.env)
         
     def pop_env(self):
         """Moves the environment back to the previous execution namespace.
@@ -121,7 +123,8 @@ class Interpreter:
                 op = self.op_stream_stack[-1].__next__() # just need one
             except StopIteration:
                 self.op_stream_stack.pop()
-                self.arg_len_stack[-1] += self.env.stack.size
+                if self.arg_len_stack:
+                    self.arg_len_stack[-1] += self.env.stack.size
                 self.pop_env()
         if op:
             return op

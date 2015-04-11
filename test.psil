@@ -1,0 +1,18 @@
+# Recursion is currently malfunctioning, so this is to verify that the rest of 
+  the language is working as intended. #
+  
+("Start of Test" out)
+(f {
+    ((b swap) def)
+    ((a swap) def)
+    ("a is:" out)((a get) out)
+    ("b is:" out)((b get) out)
+    ("a-b is:" out)((a b sub) out)
+    ("a*b is:" out)((a b mul) out)
+} def)
+(g {(7 10 f)} def)
+("(2 3 f) ->" out)
+(2 3 f)
+("(g) ->" out)
+(g)
+("End of Test" out)

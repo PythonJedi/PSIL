@@ -124,7 +124,7 @@ class String(Literal):
         super().__init__()
         
     def __repr__(self):
-        return "PSIL String: "+self.string
+        return "\""+self.string+"\""
         
     def __str__(self):
         return self.string
