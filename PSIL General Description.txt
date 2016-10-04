@@ -1,13 +1,13 @@
-PSIL (PSIL Stinkin' Isn't Lisp!)
-General Description, Version 2
+PSIL (PSIL Seriously Isn't Lisp!)
+General Description, Version 3
 Author: Timothy Hewitt
-Date: 9/16/2014
+Date: 10/3/2016
 
 Introduction:
-    PSIL is a pet project of mine to create a "pure" language with a minimal set
-    of syntactic paradigms and a simplified interpreter. It is probably useless
-    in terms of actual programming but it is a nice exploration of the concepts
-    of programming languages.
+    PSIL is a pet project of mine that started as a "pure" language with a
+    minimal set of syntactic paradigms and a simplified interpreter. It has
+    since grown with my knowledge on the subject of programming languages, and
+    features an actually interesting modification on lisps.
 
 History:
     PSIL started as a bit of a joke on lisp. I was going to make a language that
@@ -16,122 +16,32 @@ History:
     based languages did not need syntactic analysis, only lexical analysis, I
     decided that I might actually want to make an implementation.
 
-    A few years later I went back and reread the definitions with a more 
+    A few years later I went back and reread the definitions with a more
     objective eye and combined that with my dissatisfaction at the "messieness"
     of most other languages to come up with the goal of a "pure" language.
 
-Syntax Paradigms:
-    Having observed that parentheses greatly improve readability of stack 
-    oriented languages, each PSIL expression is encapsulated in parentheses.
-    This promotes a recursive mental execution model.  Namespaces have curly 
-    braces as their outer layer. Compound expressions can span multiple lines 
-    (line endings are just whitespace).
+    That project was finished and sat around for a few years while I learned a
+    lot about programming languages and fundamentals of computer science. One
+    thought that crossed my mind was "what if lisp used associative arrays
+    instead of lists?" After realizing how the operational semantics of such a
+    system could work, I rebooted the PSIL project, rewriting it mostly from the
+    ground up with the goal of implementing a lisp-alike that worked with
+    associative arrays instead of lists. I rewrote the project instead of
+    starting a new one because the old project was flawed from many angles and
+    the product of an ill-informed but well-meaning freshman bashing his way
+    through writing a programming language. This new project has the
+    mathematical simplicities of lisp, and should be all the more consistent.
 
-    As opposed to PostScript's /a method of adding names to the stack, PSIL 
-    simply binds data to string literals, which may cause issues if used 
-    improperly, though the name is still the second item to be popped from the 
-    stack.
-
-Functions:
-    Functions in PSIL are created by 'def'ining a name as a code literal 
-    designed to act as a function. This may be odd at first, but it simplifies 
-    much of the syntactic nonsense in most languages. When the name of the 
-    namespace/function is encountered later on in the program, execution 
-    switches to the code literal until the expression is reduced. Execution then 
-    returns to the point of invocation. In this way, functions essentially act 
-    as GOTOs with the added benefit of creating a new sub-namespace to work in.
-
-    Due to the syntax of calling functions in a stack based language, 
-    arguments must be named in reverse order of intended input.
-    For Example:
-
-        ("atan2" 
-        { # arc-tangent of y/x #
-            (("x" ^) def) 
-            (("y" ^) def) 
-            (
-                ((x 0 equals) not) 
-                {((y x div) atan)} 
-                {90}
-            ifel)
-        }
-        def)
-
-    atan2 is generally called in traditional languages as atan2(y, x). The call 
-    for this function would look something like (y x atan2), similar to the 
-    traditional method. This breaks from most stack oriented languages in which 
-    the first item on the stack is considered the "first" input.  This change is
-    only to increase readability. Notice that this even applies to built in 
-    functions like div, which is not defined in PSIL source code but does follow
-    the not reversed argument scheme.
-
-Data Scheme:
-    PSIL has a very controlled data system, much like other stack based 
-    languages, with an "Anonymous Data" stack. However, PSIL's namespace system 
-    to deal with variables is implemented as a tree as opposed to a stack. This 
-    allows for sub-namespaces (accessesed via ':'). These child namespaces can
-    be used both as structures and classes, depending on whether they include a
-    function definition. They are defined similarly to functions, using 'def' to
-    bind a name to a code literal. Classes, structs, and any other name for a 
-    compound data type all have 'dump' as their last function, which takes the 
-    current namespace and pushes it to the stack. With this functionality, Class 
-    definitions are actually constructors.
-
-    PSIL namespaces are similar to python objects, except that members of a 
-    python object have to be explicitly bound to the object in a constructor 
-    that is given a special name and executed when the name of the class is 
-    called as a function.
-
-Formatting:
-    As a Python programmer, indentation is very important. I prefer 4-space 
-    indentation, actual spaces, not adjusted tabs. PSIL might be able to get 
-    away with 2-space indentation because of the extremely large amount of 
-    parentheses and curly braces. Please use some form of indentation however,
-    it makes things so much better:
-
-    ("atan2" {
-    (("x" ^) def)
-    (("y" ^) def)
-    (((x 0 equals) not)
-    {((y x div) atan)}
-    {90}
-    if)
-    } def)
-
-    Or even worse:
-
-    ("atan2" {(("x" ^) def) (("y" ^) def) (((x 0 equals) not) {((y x div) atan)} {90} if) } def)
-
-    As for parentheses, they are actually completely ignored by the interpreter. 
-    Despite being important to the organization of source code, they serve no 
-    actual purpose in the language syntax. That said, any function should be 
-    encapsulated in parentheses with its intended arguments to improve 
-    readability. To illustrate this, here is the atan2 function from earlier in 
-    this document without parentheses:
-
-        "atan2" {
-            "x" ^ def
-            "y" ^ def
-                x 0 equals not
-                {y x div atan}
-                {90}
-            if
-        } def
-
-    The 'def' lines in the beginning are simple, but the conditional function is
-    hard to follow because the only indicator of where the if statement begins 
-    is the indentation. Of course, this is perfectly acceptable for a normal 
-    stack based language because the arguments to a function aren't 
-    syntactically "attached" to the function. This is, in fact, the beauty of 
-    postfix stack-based languages. For PSIL, however, readability is important
-    and using parentheses is one way to group arguments with their functions.
-    
-    The absolute worst code formatting in PSIL is combining no parentheses with 
-    no indentation or newlines:
-
-    "atan2" {"x" ^ def "y" ^ def x 0 equals not {y x div atan} {90} if} def
-
-    Someone familiar with stack-based languages would be able to follow this 
-    program, after getting over the apparent backwards arguments. Of course, the
-    interpreter would be able to roll through this program a bit quicker since 
-    it doesn't have to constantly ignore parentheses and extra whitespace.
+Operation:
+    Lisps have lists and atoms. PSIL has associative arrays and sets. The key to
+    being able to use associative arrays to define syntax is to allow multiple
+    symbols to be treated as a discrete unit. In this case, most functions are
+    binary relations, mapping symbols to symbols. When a function symbol is the
+    key to a set in an array, the function is mapped over the entire set, thus
+    producing a new set, which is then unioned with the results of any other
+    pairs in the containing array. When eval is applied to a set, the set is
+    returned, since sets are defined as fixed points of eval. Because of this
+    'mapping' nature of applying the same function to many symbols at once, PSIL
+    lends itself ever so slightly to parallelization, in that each function
+    application is independent of the other, and the results are unioned
+    together. 
